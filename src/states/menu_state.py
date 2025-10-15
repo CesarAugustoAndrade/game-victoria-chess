@@ -55,8 +55,8 @@ class MenuState(State):
 
     def start_game(self):
         """Start a new game"""
-        from src.states.game_state import GameState
-        self.game.change_state(GameState(self.game))
+        from src.states.batalla_state import BatallaState
+        self.game.change_state(BatallaState(self.game))
 
     def open_settings(self):
         """Open settings menu"""
@@ -80,9 +80,15 @@ class MenuState(State):
     def render(self, screen):
         """Render the menu"""
         # Draw title
-        title_text = self.title_font.render("Strategy Game", True, (255, 255, 255))
+        title_text = self.title_font.render("LEGIO ROMANA", True, (255, 215, 0))
         title_rect = title_text.get_rect(center=(WINDOW_WIDTH // 2, 150))
         screen.blit(title_text, title_rect)
+
+        # Subtítulo
+        subtitle_font = pygame.font.Font(None, 36)
+        subtitle_text = subtitle_font.render("Batalla Táctica", True, (200, 200, 200))
+        subtitle_rect = subtitle_text.get_rect(center=(WINDOW_WIDTH // 2, 200))
+        screen.blit(subtitle_text, subtitle_rect)
 
         # Draw buttons
         for button in self.buttons:

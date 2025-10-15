@@ -6,7 +6,7 @@ Game constants and configuration
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS = 60
-TITLE = "Strategy Simulation Game"
+TITLE = "Legio Romana - Batalla Táctica"
 
 # Colors (R, G, B)
 BLACK = (0, 0, 0)
