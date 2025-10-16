@@ -84,7 +84,8 @@ class IAAgresiva(EstrategiaIA):
                         ))
 
             # Prioridad 2: Moverse hacia enemigos si no puede atacar
-            elif unidad.puede_moverse:
+            # NOTA: Cambiado de elif a if para permitir moverse Y luego atacar
+            if not objetivos and unidad.puede_moverse:
                 movimientos = unidad.obtener_posiciones_movimiento_validas(tablero)
 
                 if movimientos:
@@ -106,6 +107,38 @@ class IAAgresiva(EstrategiaIA):
                             posicion_origen,
                             mejor_movimiento
                         ))
+
+                        # Prioridad 3: Intentar atacar después de moverse
+                        objetivos_despues_mover = unidad.obtener_objetivos_atacables(
+                            ejercito_enemigo.unidades_vivas
+                        )
+
+                        if objetivos_despues_mover and unidad.puede_actuar:
+                            mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
+                                unidad, objetivos_despues_mover
+                            )
+
+                            if mejor_objetivo:
+                                eventos.append(EventoAccionIA(
+                                    f"{unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}",
+                                    "atacar"
+                                ))
+
+                                resultado = CalculadorCombate.ejecutar_ataque(
+                                    unidad, mejor_objetivo
+                                )
+                                eventos.append(EventoAtaqueRealizado(
+                                    resultado,
+                                    grito_guerra=unidad.visualizacion.grito_guerra
+                                ))
+
+                                if resultado.objetivo_eliminado:
+                                    eventos.append(EventoUnidadEliminada(
+                                        mejor_objetivo.id,
+                                        mejor_objetivo.bando,
+                                        mejor_objetivo.tipo.value,
+                                        "¡Enemigo eliminado!"
+                                    ))
 
         return eventos
 
