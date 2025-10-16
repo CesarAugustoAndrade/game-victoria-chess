@@ -33,7 +33,47 @@ class ServicioJuego:
 
     def iniciar_nueva_batalla(self, dificultad: str = "normal") -> List[EventoDominio]:
         """Inicia una nueva batalla"""
+        # Validar dificultad
+        dificultades_validas = ["facil", "normal", "dificil"]
+        if dificultad not in dificultades_validas:
+            print(f"Dificultad '{dificultad}' no válida. Usando 'normal'")
+            dificultad = "normal"
+
         self._batalla_actual, eventos = self._caso_iniciar.ejecutar(dificultad)
+        self._eventos_procesados.extend(eventos)
+        return eventos
+
+    def iniciar_batalla_desde_nivel(self, nivel) -> List[EventoDominio]:
+        """Inicia una batalla desde un nivel de la campaña"""
+        from src.domain.factories import FabricaEjercito
+        from src.domain.entities import Tablero
+        from src.domain.strategies import IAAgresiva
+        from src.domain.value_objects import Bando
+
+        # Crear ejércitos desde las configuraciones del nivel
+        ejercito_jugador = FabricaEjercito.crear_ejercito_desde_nivel(
+            Bando.ROMA,
+            nivel.unidades_jugador
+        )
+        ejercito_enemigo = FabricaEjercito.crear_ejercito_desde_nivel(
+            Bando.BARBAROS,
+            nivel.unidades_enemigo
+        )
+
+        # Crear tablero
+        tablero = Tablero()
+
+        # Crear batalla con estrategia IA
+        estrategia_ia = IAAgresiva()
+        self._batalla_actual = Batalla(
+            ejercito_jugador,
+            ejercito_enemigo,
+            tablero,
+            estrategia_ia
+        )
+
+        # Iniciar batalla
+        eventos = self._batalla_actual.iniciar()
         self._eventos_procesados.extend(eventos)
         return eventos
 

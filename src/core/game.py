@@ -19,6 +19,9 @@ class Game:
         self.resource_manager = ResourceManager()
         self.state_manager = StateManager()
 
+        # Inicializar configuración de juego
+        self.dificultad = 'normal'  # Dificultad por defecto
+
         # Load resources
         self.resource_manager.load_all()
 

@@ -13,18 +13,36 @@ from src.domain.events import *
 class BatallaState(State):
     """Estado de batalla táctica"""
 
-    def __init__(self, game):
+    def __init__(self, game, nivel=None, campania=None):
         super().__init__(game)
         self.servicio_juego = ServicioJuego()
         self.renderer = BattleRenderer()
         self.eventos_pendientes = []
         self.mensaje_actual = ""
         self.tiempo_mensaje = 0
+        self.nivel = nivel  # Nivel opcional para campaña
+        self.campania = campania  # Referencia a la campaña para guardar progreso
+        self.tutorial_index = 0  # Índice para mensajes de tutorial
+        self.nivel_completado = False  # Flag para saber si ya se marcó como completado
 
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
-        eventos = self.servicio_juego.iniciar_nueva_batalla("normal")
-        self._procesar_eventos(eventos)
+        if self.nivel:
+            # Iniciar batalla desde nivel
+            eventos = self.servicio_juego.iniciar_batalla_desde_nivel(self.nivel)
+            self._procesar_eventos(eventos)
+
+            # Mostrar primer mensaje de tutorial si es un nivel tutorial
+            if self.nivel.es_tutorial and self.nivel.tutorial_messages:
+                self._mostrar_tutorial()
+        else:
+            # Batalla normal (ejércitos completos)
+            # Obtener dificultad del game o usar normal por defecto
+            dificultad = getattr(self.game, 'dificultad', 'normal')
+            print(f"Iniciando batalla con dificultad: {dificultad.upper()}")
+
+            eventos = self.servicio_juego.iniciar_nueva_batalla(dificultad)
+            self._procesar_eventos(eventos)
 
     def handle_event(self, event):
         """Maneja eventos de pygame"""
@@ -34,9 +52,14 @@ class BatallaState(State):
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                # Volver al menú
-                from src.states.menu_state import MenuState
-                self.game.change_state(MenuState(self.game))
+                # Volver al selector de niveles si es campaña, o al menú si no
+                if self.nivel and self.campania:
+                    from src.states.nivel_selector_state import NivelSelectorState
+                    # Volver al selector con la misma campaña (progreso guardado)
+                    self.game.change_state(NivelSelectorState(self.game, self.campania))
+                else:
+                    from src.states.menu_state import MenuState
+                    self.game.change_state(MenuState(self.game))
 
             elif event.key == pygame.K_SPACE:
                 # Finalizar turno
@@ -52,6 +75,10 @@ class BatallaState(State):
                 # Reiniciar batalla
                 self.servicio_juego.reiniciar_juego()
                 self.on_enter()
+
+            elif event.key == pygame.K_t and self.nivel and self.nivel.es_tutorial:
+                # Mostrar siguiente mensaje de tutorial
+                self._mostrar_tutorial()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if batalla.turno_actual == TurnoActual.JUGADOR and not batalla.batalla_terminada:
@@ -90,17 +117,24 @@ class BatallaState(State):
         if unidad_en_pos:
             # Seleccionar unidad del jugador
             if unidad_en_pos.bando == Bando.ROMA:
-                eventos = self.servicio_juego.seleccionar_unidad(unidad_en_pos.id)
-                self._procesar_eventos(eventos)
-                self._actualizar_highlights()
+                try:
+                    eventos = self.servicio_juego.seleccionar_unidad(unidad_en_pos.id)
+                    self._procesar_eventos(eventos)
+                    self._actualizar_highlights()
+                except Exception as e:
+                    # Mostrar mensaje si no se puede seleccionar
+                    self._mostrar_mensaje(str(e))
         else:
             # Mover unidad seleccionada si el movimiento es válido
             if batalla.unidad_seleccionada:
                 movimientos = batalla.obtener_movimientos_validos_unidad_seleccionada()
                 if posicion in movimientos:
-                    eventos = self.servicio_juego.mover_unidad(posicion.fila, posicion.columna)
-                    self._procesar_eventos(eventos)
-                    self._actualizar_highlights()
+                    try:
+                        eventos = self.servicio_juego.mover_unidad(posicion.fila, posicion.columna)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                    except Exception as e:
+                        self._mostrar_mensaje(f"Error al mover: {e}")
                 else:
                     # Deseleccionar si no es movimiento válido
                     self.servicio_juego.deseleccionar_unidad()
@@ -118,9 +152,12 @@ class BatallaState(State):
                 # Intentar atacar
                 objetivos = batalla.obtener_objetivos_atacables_unidad_seleccionada()
                 if unidad in objetivos:
-                    eventos = self.servicio_juego.atacar_enemigo(unidad.id)
-                    self._procesar_eventos(eventos)
-                    self._actualizar_highlights()
+                    try:
+                        eventos = self.servicio_juego.atacar_enemigo(unidad.id)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                    except Exception as e:
+                        self._mostrar_mensaje(f"Error al atacar: {e}")
                 else:
                     self._mostrar_mensaje("¡Objetivo fuera de alcance!")
                 break
@@ -153,7 +190,15 @@ class BatallaState(State):
             elif isinstance(evento, EventoBatallaTerminada):
                 self._mostrar_mensaje(evento.mensaje)
                 if evento.ganador == Bando.ROMA:
-                    self._mostrar_mensaje("¡VICTORIA! Presiona R para jugar de nuevo")
+                    if self.nivel and self.campania and not self.nivel_completado:
+                        # Marcar nivel como completado
+                        self.campania.niveles_completados.add(self.nivel.numero - 1)
+                        self.nivel_completado = True
+                        self._mostrar_mensaje(f"¡NIVEL {self.nivel.numero} COMPLETADO! Presiona ESC para continuar")
+                    elif self.nivel:
+                        self._mostrar_mensaje(f"¡NIVEL {self.nivel.numero} COMPLETADO! Presiona ESC para continuar")
+                    else:
+                        self._mostrar_mensaje("¡VICTORIA! Presiona R para jugar de nuevo")
                 else:
                     self._mostrar_mensaje("¡DERROTA! Presiona R para intentar de nuevo")
 
@@ -209,3 +254,22 @@ class BatallaState(State):
         pygame.draw.rect(screen, (255, 215, 0), bg_rect, 2)
 
         screen.blit(text, text_rect)
+
+        # Renderizar información de tutorial si es un nivel tutorial
+        if self.nivel and self.nivel.es_tutorial:
+            info_font = pygame.font.Font(None, 20)
+            tutorial_text = info_font.render("Presiona T para más consejos", True, (100, 200, 255))
+            screen.blit(tutorial_text, (screen.get_width() - 250, screen.get_height() - 30))
+
+    def _mostrar_tutorial(self):
+        """Muestra mensajes de tutorial secuencialmente"""
+        if not self.nivel or not self.nivel.tutorial_messages:
+            return
+
+        if self.tutorial_index < len(self.nivel.tutorial_messages):
+            mensaje = self.nivel.tutorial_messages[self.tutorial_index]
+            self._mostrar_mensaje(f"📖 TUTORIAL: {mensaje}")
+            self.tutorial_index += 1
+        else:
+            self._mostrar_mensaje("📖 No hay más consejos. ¡Adelante soldado!")
+            self.tutorial_index = 0  # Reiniciar

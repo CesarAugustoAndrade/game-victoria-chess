@@ -18,27 +18,37 @@ class MenuState(State):
 
     def setup_buttons(self):
         """Create menu buttons"""
-        button_width = 200
+        button_width = 220
         button_height = 50
         button_x = WINDOW_WIDTH // 2 - button_width // 2
-        start_y = WINDOW_HEIGHT // 2
+        start_y = WINDOW_HEIGHT // 2 - 50
 
-        # New Game button
+        # Campaign button (selector de niveles)
         self.buttons.append(
             Button(
                 button_x, start_y,
                 button_width, button_height,
-                "New Game",
-                self.start_game
+                "Campaña",
+                self.start_campaign
+            )
+        )
+
+        # Quick Battle button (batalla rápida con ejércitos completos)
+        self.buttons.append(
+            Button(
+                button_x, start_y + 70,
+                button_width, button_height,
+                "Batalla Rápida",
+                self.start_quick_battle
             )
         )
 
         # Settings button
         self.buttons.append(
             Button(
-                button_x, start_y + 70,
+                button_x, start_y + 140,
                 button_width, button_height,
-                "Settings",
+                "Opciones",
                 self.open_settings
             )
         )
@@ -46,21 +56,27 @@ class MenuState(State):
         # Exit button
         self.buttons.append(
             Button(
-                button_x, start_y + 140,
+                button_x, start_y + 210,
                 button_width, button_height,
-                "Exit",
+                "Salir",
                 self.exit_game
             )
         )
 
-    def start_game(self):
-        """Start a new game"""
+    def start_campaign(self):
+        """Inicia la campaña (selector de niveles)"""
+        from src.states.nivel_selector_state import NivelSelectorState
+        self.game.change_state(NivelSelectorState(self.game))
+
+    def start_quick_battle(self):
+        """Inicia una batalla rápida con ejércitos completos"""
         from src.states.batalla_state import BatallaState
         self.game.change_state(BatallaState(self.game))
 
     def open_settings(self):
         """Open settings menu"""
-        print("Settings not implemented yet")
+        from src.states.settings_state import SettingsState
+        self.game.change_state(SettingsState(self.game))
 
     def exit_game(self):
         """Exit the game"""
