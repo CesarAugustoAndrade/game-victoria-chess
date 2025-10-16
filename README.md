@@ -1,131 +1,229 @@
-# Strategy/Simulation Game
+# 🏛️ LEGIO ROMANA - Juego de Batalla Táctica
 
-A tile-based strategy/simulation game built with Pygame.
+Un juego de estrategia táctica por turnos basado en las legiones romanas, construido con Pygame y arquitectura Domain-Driven Design (DDD).
 
-## Features
+![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue)
+![Pygame Version](https://img.shields.io/badge/Pygame-2.5.2-green)
+![Architecture](https://img.shields.io/badge/Architecture-DDD-purple)
+![Status](https://img.shields.io/badge/Status-Playable-success)
 
-- **Tile-based map system**: Procedurally generated maps with different terrain types (grass, forest, water, mountains, sand)
-- **Entity system**: Units with movement, selection, and health systems
-- **Camera system**: Pan and zoom functionality
-- **Resource management**: Track and manage resources (gold, food, wood, stone)
-- **State management**: Menu system and game states
-- **HUD**: Display resources, unit information, and controls
+## ⚔️ Descripción
 
-## Installation
+Comanda las legendarias legiones romanas contra hordas bárbaras en batallas tácticas por turnos. El juego presenta combate estratégico en un tablero de 9x7 con unidades históricamente inspiradas, sistema de moral, y formaciones tácticas auténticas.
 
-1. Make sure you have Python 3.7+ installed
-2. Install Pygame:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🎮 Características
 
-## Running the Game
+### Sistema de Batalla
+- **Combate por turnos** en tablero táctico 9x7
+- **Sistema de moral** que afecta el rendimiento en batalla
+- **Formaciones romanas** históricas (Testudo, Cuneus, Orbis)
+- **IA enemiga** con 3 niveles de dificultad (Defensiva, Agresiva, Táctica)
+- **Gritos de guerra** en latín auténtico
 
+### Unidades Romanas 🦅
+
+| Unidad | Icono | Descripción | Características |
+|--------|-------|-------------|-----------------|
+| **Legionario** | ⚔️ | Infantería básica | Balanceado, versátil |
+| **Hastati** | 🛡️ | Infantería pesada | Alta defensa y ataque |
+| **Triarii** | 🎯 | Piqueros veteranos | Bonus vs caballería, alta moral |
+| **Equites** | 🐎 | Caballería | Movimiento rápido (3 casillas) |
+| **Sagittarii** | 🏹 | Arqueros | Ataque a distancia (alcance 3) |
+
+### Unidades Bárbaras 🪓
+
+| Unidad | Descripción | Características |
+|--------|-------------|-----------------|
+| **Guerrero** | Infantería bárbara | Hacha, agresivo |
+| **Berserker** | Infantería furiosa | Dos hachas, alto daño |
+| **Lancero** | Anti-caballería | Lanza larga |
+| **Jinete** | Caballería bárbara | Rápido pero menos armado |
+| **Arquero** | Tiradores | Arco primitivo |
+
+### Sistema Visual
+- **Sprites únicos** detallados para cada tipo de unidad
+- **Indicadores de estado** visuales:
+  - 🟢 Puede actuar completamente
+  - 🟡 Solo puede moverse
+  - ⚫ Ya actuó este turno
+  - ❗ En pánico (moral baja)
+- **Barras de vida y moral** con códigos de color
+- **Diferenciación clara** entre romanos (rojos/dorados) y bárbaros (verdes/marrones)
+
+## 🚀 Instalación
+
+### Requisitos
+- Python 3.7 o superior
+- pip (gestor de paquetes de Python)
+
+### Pasos
+
+1. **Clonar el repositorio** (o descargar los archivos)
+```bash
+git clone https://github.com/tu-usuario/legio-romana.git
+cd legio-romana
+```
+
+2. **Cambiar a la rama del juego**
+```bash
+git checkout game/legio-romana
+```
+
+3. **Instalar dependencias**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Ejecutar el juego**
 ```bash
 python main.py
 ```
 
-## Controls
+## 🎯 Cómo Jugar
 
-### Menu
-- Click buttons to navigate
+### Controles
 
-### In-Game
-- **Camera Movement**:
-  - Arrow keys or WASD: Move camera
-  - Mouse wheel: Zoom in/out
+| Tecla/Acción | Función |
+|--------------|---------|
+| **Click Izquierdo** | Seleccionar unidad / Mover a casilla válida |
+| **Click Derecho** | Atacar enemigo en rango |
+| **Espacio** | Finalizar turno |
+| **F** | Cambiar formación (Línea/Testudo/Cuneus/Orbis) |
+| **R** | Reiniciar batalla (cuando termina) |
+| **ESC** | Volver al menú principal |
 
-- **Unit Control**:
-  - Left click: Select units
-  - Right click: Move selected units
-  - ESC: Return to menu
+### Mecánicas de Juego
 
-## Project Structure
+1. **Selección y Movimiento**
+   - Click izquierdo en tu unidad para seleccionarla
+   - Las casillas verdes muestran movimientos válidos
+   - Click en una casilla verde para mover
+
+2. **Combate**
+   - Las casillas rojas muestran enemigos atacables
+   - Click derecho en un enemigo para atacar
+   - El daño depende del ataque vs defensa
+
+3. **Moral**
+   - Las unidades pierden moral al recibir daño
+   - Moral < 30% = pánico (no puede actuar)
+   - Se recupera 5% de moral por turno
+
+4. **Formaciones**
+   - **Línea**: Estándar, balanceada
+   - **Testudo** (Tortuga): +Defensa, -Ataque
+   - **Cuneus** (Cuña): +Ataque, -Defensa
+   - **Orbis** (Círculo): +Moral, defensiva
+
+### Estrategia
+
+- Los **Triarii** (piqueros) son efectivos contra caballería
+- La **caballería** es efectiva contra arqueros
+- Los **arqueros** pueden atacar a distancia
+- Mantén la **moral alta** para evitar el pánico
+- Usa **formaciones** según la situación táctica
+
+## 🏗️ Arquitectura
+
+El juego utiliza **Domain-Driven Design (DDD)** con capas claramente separadas:
 
 ```
-├── main.py                 # Entry point
-├── src/
-│   ├── core/              # Core game systems
-│   │   ├── game.py        # Main game class
-│   │   ├── state.py       # Base state class
-│   │   └── state_manager.py
-│   ├── entities/          # Game entities
-│   │   ├── entity.py      # Base entity class
-│   │   └── unit.py        # Unit class
-│   ├── states/            # Game states
-│   │   ├── menu_state.py  # Main menu
-│   │   └── game_state.py  # Gameplay state
-│   ├── systems/           # Game systems
-│   │   ├── camera.py      # Camera/viewport
-│   │   ├── entity_manager.py
-│   │   ├── map_system.py  # Tile map
-│   │   └── resource_manager.py
-│   ├── ui/                # UI components
-│   │   ├── button.py
-│   │   └── hud.py         # Heads-up display
-│   └── utils/
-│       └── constants.py   # Game configuration
-├── assets/                # Game assets
-│   ├── sprites/
-│   ├── sounds/
-│   └── fonts/
-└── data/                  # Game data files
+src/
+├── domain/              # Lógica de negocio pura
+│   ├── entities.py      # Unidad, Ejército, Tablero
+│   ├── value_objects.py # Posición, EstadísticasUnidad
+│   ├── services.py      # CalculadorCombate, CalculadorPrioridad
+│   ├── events.py        # Eventos de dominio
+│   ├── strategies.py    # Estrategias de IA
+│   ├── factories.py     # Creación de ejércitos
+│   ├── batalla.py       # Agregado raíz
+│   └── exceptions.py    # Excepciones de dominio
+│
+├── application/         # Casos de uso y servicios
+│   ├── use_cases.py     # IniciarBatalla, MoverUnidad, etc.
+│   └── servicio_juego.py # Coordinador principal
+│
+├── presentation/        # Capa de presentación
+│   ├── battle_renderer.py # Renderizado del tablero
+│   └── unit_sprites.py    # Sistema de sprites detallados
+│
+├── states/             # Estados del juego
+│   ├── menu_state.py   # Menú principal
+│   └── batalla_state.py # Estado de batalla táctica
+│
+└── core/               # Sistema base
+    └── state_manager.py # Gestión de estados
 ```
 
-## Extending the Game
+### Principios DDD Aplicados
 
-### Adding New Unit Types
+- **Entidades**: Objetos con identidad (Unidad, Ejército)
+- **Value Objects**: Objetos inmutables (Posición, Estadísticas)
+- **Agregados**: Batalla como raíz agregada
+- **Eventos de Dominio**: Comunicación desacoplada
+- **Servicios de Dominio**: Lógica compleja (combate, IA)
+- **Fábricas**: Creación de objetos complejos
 
-1. Add unit configuration to `src/utils/constants.py`:
-   - Add to `UNIT_COSTS` dictionary
-   - Add to `UNIT_STATS` dictionary
+## 🛠️ Desarrollo
 
-2. Update the `Unit` class in `src/entities/unit.py` if needed
+### Agregar Nuevas Unidades
 
-### Adding New Buildings
+1. Definir tipo en `src/domain/value_objects.py`
+2. Agregar estadísticas en `src/domain/factories.py`
+3. Crear sprite en `src/presentation/unit_sprites.py`
 
-1. Create a new `Building` class in `src/entities/building.py`
-2. Add building costs to `BUILDING_COSTS` in constants
-3. Update the entity manager to handle buildings
+### Agregar Nuevas Estrategias IA
 
-### Adding New Terrain Types
+1. Heredar de `EstrategiaIA` en `src/domain/strategies.py`
+2. Implementar método `ejecutar_turno()`
+3. Registrar en `src/application/use_cases.py`
 
-1. Add new terrain type to `TileType` enum in `src/systems/map_system.py`
-2. Add color mapping in `Tile.get_color()`
-3. Update terrain movement costs in constants
+## 📊 Estadísticas del Juego
 
-### Implementing Pathfinding
+- **Tablero**: 9 filas × 7 columnas = 63 casillas
+- **Unidades por ejército**: 15 unidades
+- **Tipos de unidades**: 5 por bando
+- **Formaciones disponibles**: 4
+- **Niveles de IA**: 3
+- **Rango máximo de ataque**: 3 casillas (arqueros)
+- **Rango máximo de movimiento**: 3 casillas (caballería)
 
-The game structure is ready for A* pathfinding:
-1. Create `src/systems/pathfinding.py`
-2. Use the map system's walkability data
-3. Integrate with unit movement
+## 🎯 Roadmap
 
-### Adding Combat System
+### Próximas Características
+- [ ] Sistema de campaña con múltiples batallas
+- [ ] Experiencia y veteranía de unidades
+- [ ] Efectos de sonido y música
+- [ ] Animaciones de movimiento y combate
+- [ ] Diferentes tipos de terreno
+- [ ] Editor de mapas
+- [ ] Modo multijugador local
+- [ ] Más formaciones tácticas
+- [ ] Sistema de logros
 
-1. Create `src/systems/combat.py`
-2. Add attack methods to units
-3. Implement damage calculation
-4. Add combat animations
+## 🤝 Contribuir
 
-## Future Enhancements
+¡Las contribuciones son bienvenidas! Por favor:
 
-- [ ] Pathfinding (A* algorithm)
-- [ ] Building placement system
-- [ ] Combat system
-- [ ] Fog of war
-- [ ] Minimap
-- [ ] Save/Load system
-- [ ] Sound effects and music
-- [ ] Particle effects
-- [ ] Multiplayer support
-- [ ] AI opponents
-- [ ] Resource gathering animations
-- [ ] Day/night cycle
-- [ ] Weather effects
-- [ ] Unit formations
-- [ ] Technology tree
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/NuevaCaracteristica`)
+3. Commit tus cambios (`git commit -m 'Agrega nueva característica'`)
+4. Push a la rama (`git push origin feature/NuevaCaracteristica`)
+5. Abre un Pull Request
 
-## License
+## 📜 Licencia
 
-This project is open source. Feel free to use and modify it for your own projects.
+Este proyecto es de código abierto y está disponible bajo la licencia MIT.
+
+## 🏆 Créditos
+
+- **Arquitectura**: Domain-Driven Design por Eric Evans
+- **Framework**: Pygame Community
+- **Inspiración histórica**: Las legiones romanas y sus tácticas
+- **Desarrollado con**: Claude AI Assistant
+
+---
+
+**¡ROMA INVICTA!** 🦅
+
+*"Si vis pacem, para bellum" - Si quieres paz, prepárate para la guerra*
