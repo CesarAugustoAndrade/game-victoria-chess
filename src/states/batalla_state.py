@@ -454,7 +454,6 @@ class BatallaState(State):
 
                         posicion_origen = unidad.posicion
                         unidad.mover_a(mejor_movimiento)
-                        batalla.tablero.actualizar_posicion(unidad.id, posicion_origen, mejor_movimiento)
 
                         eventos.append(EventoUnidadMovida(
                             unidad.id,
