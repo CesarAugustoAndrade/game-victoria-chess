@@ -1,5 +1,5 @@
 """
-Renderizador de batalla táctica para pygame
+Renderizador de batalla táctica ÉPICO para pygame
 """
 
 import pygame
@@ -12,6 +12,10 @@ from src.domain.entities import Unidad
 from src.presentation.sprite_loader import EpicSpriteLoader, SpriteEffects
 from src.presentation.particle_system import ParticleSystem, ParticleEffects
 from src.presentation.sound_system import EpicSoundSystem, WarCryGenerator
+from src.presentation.animation_system import AnimationManager, Tween, EaseType, FloatingText
+from src.presentation.camera_effects import CinematicCamera, CombatZoomController, ScreenEffect
+from src.presentation.ui_effects import ModernTooltip, TooltipData, NotificationSystem, DamageNumberSystem
+from src.presentation.weather_system import WeatherSystem, WeatherType, TimeOfDay
 
 
 class BattleRenderer:
@@ -49,65 +53,105 @@ class BattleRenderer:
         self.objetivos_atacables = []
         self.animaciones = []
 
-        # Sistemas épicos
-        self.sprite_loader = EpicSpriteLoader()  # Nuevo sistema de sprites
+        # ===== SISTEMAS ÉPICOS MEJORADOS =====
+        self.sprite_loader = EpicSpriteLoader()
         self.particle_system = ParticleSystem(max_particles=2000)
         self.sound_system = EpicSoundSystem()
         self.sprite_effects = SpriteEffects()
 
+        # Nuevos sistemas épicos
+        self.animation_manager = AnimationManager()
+        self.camera = CinematicCamera(screen_width, screen_height)
+        self.combat_zoom = CombatZoomController(self.camera)
+        self.tooltip_system = ModernTooltip(self.font_stats, self.font_small)
+        self.notification_system = NotificationSystem(screen_width, screen_height)
+        self.damage_numbers = DamageNumberSystem()
+        self.weather_system = WeatherSystem(screen_width, screen_height)
+
+        # Configuración inicial épica
+        self.weather_system.set_weather(WeatherType.CLEAR, 0.5)
+        self.weather_system.set_time_of_day(TimeOfDay.AFTERNOON)
+
         # Animaciones activas
         self.active_animations = []
         self.combat_effects = []
+        self.floating_texts = []
 
         # Estado de batalla épico
         self.battle_intensity = 0  # 0-100 intensidad de batalla
-        self.screen_shake = 0  # Temblor de pantalla
+        self.screen_shake = 0  # Temblor de pantalla (legacy, ahora usa camera)
         self.last_war_cry_time = 0
 
+        # Animaciones de unidades
+        self.unit_animations = {}  # unit_id -> animation_state
+
     def render(self, screen: pygame.Surface, batalla: Optional[Batalla]):
-        """Renderiza la batalla completa con efectos épicos"""
+        """Renderiza la batalla completa con efectos épicos mejorados"""
         if not batalla:
             self._render_no_battle(screen)
             return
 
-        # Aplicar screen shake si hay
-        shake_offset = self._calculate_screen_shake()
+        delta_time = 0.016  # ~60 FPS
 
-        # Crear surface temporal si hay shake
-        if shake_offset != (0, 0):
-            temp_surface = pygame.Surface((self.screen_width, self.screen_height))
-            render_surface = temp_surface
-        else:
-            render_surface = screen
+        # Actualizar todos los sistemas
+        self.camera.update(delta_time)
+        self.animation_manager.update(delta_time)
+        self.weather_system.update(delta_time)
+        self.notification_system.update(delta_time)
+        self.tooltip_system.update(delta_time)
+        self.damage_numbers.update(delta_time)
+        self.particle_system.update(delta_time)
 
-        # Fondo
+        # Crear superficie de renderizado con transformación de cámara
+        render_surface = pygame.Surface((self.screen_width, self.screen_height))
+
+        # ===== CAPAS DE RENDERIZADO =====
+
+        # 1. Fondo y clima
         self._render_background(render_surface)
+        self.weather_system.render(render_surface)
 
-        # Tablero
-        self._render_board(render_surface)
+        # 2. Tablero con efectos de cámara
+        camera_surface = pygame.Surface((self.screen_width, self.screen_height))
+        self._render_board(camera_surface)
+        self._render_special_tiles(camera_surface, batalla)
 
-        # Casillas especiales (movimientos válidos, objetivos)
-        self._render_special_tiles(render_surface, batalla)
+        # 3. Sistema de partículas (detrás de las unidades)
+        self.particle_system.render(camera_surface)
 
-        # Sistema de partículas (detrás de las unidades)
-        self.particle_system.update(0.016)  # ~60 FPS
-        self.particle_system.render(render_surface)
+        # 4. Unidades con animaciones
+        self._render_units(camera_surface, batalla)
 
-        # Unidades
-        self._render_units(render_surface, batalla)
+        # 5. Efectos de combate
+        self._render_combat_effects(camera_surface)
 
-        # Efectos de combate
-        self._render_combat_effects(render_surface)
+        # 6. Números de daño flotantes
+        self.damage_numbers.render(camera_surface)
 
-        # UI
+        # Aplicar transformaciones de cámara
+        transformed_surface = self.camera.apply_transform(camera_surface)
+        render_surface.blit(transformed_surface, (0, 0))
+
+        # 7. Efectos de post-procesamiento (después de cámara)
+        self.camera.render_effects(render_surface)
+
+        # 8. UI (no afectada por cámara)
         self._render_ui(render_surface, batalla)
 
-        # Animaciones
+        # 9. Notificaciones flotantes
+        self.notification_system.render(render_surface)
+
+        # 10. Tooltips (siempre arriba)
+        self.tooltip_system.render(render_surface)
+
+        # 11. Animaciones de UI
         self._render_animations(render_surface)
 
-        # Si hubo shake, aplicar el offset
-        if shake_offset != (0, 0):
-            screen.blit(render_surface, shake_offset)
+        # Actualizar ambiente de batalla
+        self.update_battle_ambience()
+
+        # Blit final a pantalla
+        screen.blit(render_surface, (0, 0))
 
     def _render_background(self, screen: pygame.Surface):
         """Renderiza el fondo"""
@@ -431,14 +475,6 @@ class BattleRenderer:
             else:
                 self.combat_effects.remove(effect)
 
-    def _calculate_screen_shake(self) -> Tuple[int, int]:
-        """Calcula el offset de screen shake"""
-        if self.screen_shake > 0:
-            self.screen_shake -= 0.5
-            offset_x = random.randint(-int(self.screen_shake), int(self.screen_shake))
-            offset_y = random.randint(-int(self.screen_shake), int(self.screen_shake))
-            return (offset_x, offset_y)
-        return (0, 0)
 
     def _render_slash_effect(self, screen: pygame.Surface, effect: dict):
         """Renderiza efecto de corte"""
@@ -475,27 +511,40 @@ class BattleRenderer:
 
     def trigger_attack_effect(self, attacker_pos: Posicion, target_pos: Posicion,
                              attacker_type: TipoUnidad, damage: int):
-        """Dispara efectos visuales y sonoros de ataque"""
+        """Dispara efectos visuales y sonoros de ataque ÉPICOS"""
         # Posición en pantalla
         ax = self.board_offset_x + attacker_pos.columna * self.tile_size + self.tile_size // 2
         ay = self.board_offset_y + attacker_pos.fila * self.tile_size + self.tile_size // 2
         tx = self.board_offset_x + target_pos.columna * self.tile_size + self.tile_size // 2
         ty = self.board_offset_y + target_pos.fila * self.tile_size + self.tile_size // 2
 
+        # Zoom cinematográfico en combate
+        self.combat_zoom.start_combat((ax, ay), (tx, ty))
+
         # Efectos según tipo de atacante
         if attacker_type == TipoUnidad.SAGITTARII:
-            # Flecha volando
+            # Flecha volando con trayectoria animada
             ParticleEffects.create_arrow_trail(self.particle_system, ax, ay)
             self.sound_system.play_battle_sound("arrow_shot", (ax, ay))
 
+            # Animación de flecha
+            arrow_tween_x = Tween(ax, tx, 0.3, ease_type=EaseType.LINEAR)
+            arrow_tween_y = Tween(ay, ty - 30, 0.15, ease_type=EaseType.EASE_OUT)
+            arrow_tween_y2 = Tween(ty - 30, ty, 0.15, ease_type=EaseType.EASE_IN)
+            self.animation_manager.add_tween("arrow_x", arrow_tween_x)
+            self.animation_manager.add_tween("arrow_y", arrow_tween_y)
+
         elif attacker_type == TipoUnidad.EQUITES:
-            # Carga de caballería
-            self.screen_shake = 10
+            # Carga de caballería épica
+            self.camera.shake_camera(15, 0.5, 40)
             ParticleEffects.create_dust_cloud(self.particle_system, tx, ty)
             self.sound_system.play_battle_sound("horse_gallop", (ax, ay))
 
+            # Speed lines para sensación de velocidad
+            self.camera.create_speed_lines(math.atan2(ty - ay, tx - ax), 0.8)
+
         else:
-            # Ataque cuerpo a cuerpo
+            # Ataque cuerpo a cuerpo mejorado
             self.combat_effects.append({
                 'type': 'slash',
                 'position': (tx - 40, ty - 40),
@@ -506,16 +555,40 @@ class BattleRenderer:
             })
             self.sound_system.play_battle_sound("sword_hit", (tx, ty))
 
-        # Efectos de impacto
-        if damage > 20:
-            # Daño alto = más efectos
+            # Pequeño shake para impacto
+            self.camera.add_trauma(0.2)
+
+        # Efectos de impacto mejorados
+        is_critical = damage > 30
+        if is_critical:
+            # GOLPE CRÍTICO - Efectos épicos
+            self.combat_zoom.critical_hit()
             ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
-            self.screen_shake = min(15, self.screen_shake + damage / 5)
+            self.camera.screen_flash((255, 0, 0), 100)
+
+            # Notificación épica
+            self.notification_system.add_notification(
+                f"¡GOLPE CRÍTICO! {damage} daño",
+                (255, 50, 50),
+                duration=2.0
+            )
+        elif damage > 20:
+            # Daño alto
+            ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
+            self.camera.add_trauma(0.3)
         else:
+            # Daño normal
             ParticleEffects.create_spark_burst(self.particle_system, tx, ty)
+
+        # Número de daño flotante
+        self.damage_numbers.add_damage_number(tx, ty, damage, is_critical)
 
         # Incrementar intensidad de batalla
         self.battle_intensity = min(100, self.battle_intensity + 10)
+
+        # Clima más intenso durante batalla
+        if self.battle_intensity > 50:
+            self.weather_system.create_battle_atmosphere()
 
     def trigger_unit_death(self, unit_pos: Posicion, unit_type: TipoUnidad):
         """Efectos cuando muere una unidad"""
@@ -586,29 +659,73 @@ class BattleRenderer:
             ParticleEffects.create_magic_aura(self.particle_system, cx, cy, (255, 215, 0))
 
     def trigger_victory_effects(self):
-        """Efectos épicos de victoria"""
-        # Fuegos artificiales
-        for _ in range(3):
+        """Efectos épicos de victoria mejorados"""
+        # Modo cinemático
+        self.camera.enter_cinematic_mode()
+        self.camera.set_zoom(0.9, instant=False)
+
+        # Fuegos artificiales múltiples
+        for i in range(5):
             x = random.randint(200, self.screen_width - 200)
             y = random.randint(100, 300)
+            # Delay escalonado para fuegos artificiales
+            pygame.time.set_timer(pygame.USEREVENT + 10 + i, i * 500)
             ParticleEffects.create_victory_celebration(self.particle_system, x, y)
+
+        # Efectos visuales de victoria
+        self.camera.add_effect(ScreenEffect.VICTORY_GLOW)
+
+        # Notificación épica
+        self.notification_system.add_notification(
+            "¡VICTORIA! ¡Gloria a Roma!",
+            (255, 215, 0),
+            duration=5.0
+        )
 
         # Música de victoria
         self.sound_system.play_music("victory")
+
+        # Clima despejado para celebración
+        self.weather_system.set_weather(WeatherType.CLEAR, 0.2)
+        self.weather_system.set_time_of_day(TimeOfDay.DUSK)
+
+        # Gritos de victoria
+        self.sound_system.play_war_cry(True)
 
         # Reset intensidad
         self.battle_intensity = 0
 
     def trigger_defeat_effects(self):
-        """Efectos de derrota"""
+        """Efectos de derrota dramáticos"""
+        # Modo cinemático oscuro
+        self.camera.enter_cinematic_mode()
+        self.camera.add_effect(ScreenEffect.DEFEAT_DARKNESS)
+
+        # Zoom out lento
+        self.camera.set_zoom(0.7, instant=False)
+
+        # Lluvia triste
+        self.weather_system.set_weather(WeatherType.RAIN, 0.8)
+        self.weather_system.set_time_of_day(TimeOfDay.NIGHT)
+
         # Música triste
         self.sound_system.play_music("defeat")
 
-        # Partículas oscuras
-        for _ in range(5):
+        # Notificación de derrota
+        self.notification_system.add_notification(
+            "Derrota... Las águilas han caído",
+            (150, 50, 50),
+            duration=5.0
+        )
+
+        # Partículas de ceniza cayendo
+        for _ in range(10):
             x = random.randint(0, self.screen_width)
             y = random.randint(0, self.screen_height // 2)
             ParticleEffects.create_dust_cloud(self.particle_system, x, y)
+
+        # Camera shake suave de desesperación
+        self.camera.shake_camera(5, 2.0, 5)
 
     def update_battle_ambience(self):
         """Actualiza el ambiente de batalla"""

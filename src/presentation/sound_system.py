@@ -83,29 +83,298 @@ class EpicSoundSystem:
                         break
 
     def _create_synthetic_sounds(self):
-        """Crea sonidos sintéticos si no hay archivos"""
-        print("[SOUND] Creating synthetic battle sounds...")
+        """Crea sonidos sintéticos épicos si no hay archivos"""
+        print("[SOUND] Creating EPIC synthetic battle sounds...")
 
-        # Generar tonos sintéticos para efectos
-        sample_rate = 22050
-        duration = 0.2
+        try:
+            import numpy as np
+        except ImportError:
+            print("[WARNING] NumPy not installed, sounds will be limited")
+            return
+
+        sample_rate = 44100  # Mayor calidad
+
+        # ========== SONIDO DE ESPADA ÉPICO ==========
+        duration = 0.3
         num_samples = int(sample_rate * duration)
+        sword_samples = np.zeros((num_samples, 2), dtype=np.int16)
 
-        # Sonido de espada (ruido blanco + tono bajo) - Crear en estéreo
-        sword_samples = []
         for i in range(num_samples):
             t = i / sample_rate
-            # Tono bajo decayendo
-            tone = int(1000 * pygame.math.Vector2(1, 0).rotate(440 * t * 360).x * (1 - t/duration))
-            # Añadir ruido
-            noise = random.randint(-500, 500)
-            value = max(-32768, min(32767, tone + noise))
-            # Añadir canal izquierdo y derecho (estéreo)
-            sword_samples.append([value, value])
 
-        import numpy as np
-        sword_array = np.array(sword_samples, dtype=np.int16)
-        self.sounds["sword_hit"] = pygame.sndarray.make_sound(sword_array)
+            # Múltiples componentes de frecuencia para sonido metálico
+            freq1 = 800 * (1 - t * 2)  # Frecuencia principal decayendo
+            freq2 = 1200 * (1 - t * 1.5)  # Armónico alto
+            freq3 = 400 * (1 - t)  # Bajo
+
+            # Generar tonos
+            tone1 = np.sin(2 * np.pi * freq1 * t) * 8000 * np.exp(-t * 10)
+            tone2 = np.sin(2 * np.pi * freq2 * t) * 4000 * np.exp(-t * 15)
+            tone3 = np.sin(2 * np.pi * freq3 * t) * 6000 * np.exp(-t * 5)
+
+            # Ruido metálico
+            metallic_noise = np.random.randint(-2000, 2000) * np.exp(-t * 8)
+
+            # Combinar
+            value = tone1 + tone2 + tone3 + metallic_noise
+            value = np.clip(value, -32768, 32767)
+
+            # Estéreo con ligera diferencia
+            sword_samples[i] = [value, value * 0.95]
+
+        self.sounds["sword_hit"] = pygame.sndarray.make_sound(sword_samples.astype(np.int16))
+
+        # ========== FLECHA VOLANDO ==========
+        duration = 0.5
+        num_samples = int(sample_rate * duration)
+        arrow_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Whoosh ascendente
+            freq = 200 + t * 800  # Frecuencia aumentando
+            volume = 5000 * np.sin(np.pi * t / duration)  # Envolvente
+
+            # Tono principal
+            tone = np.sin(2 * np.pi * freq * t) * volume
+
+            # Añadir algo de viento/silbido
+            wind = np.random.randn() * 1000 * volume / 5000
+
+            value = tone + wind
+            arrow_samples[i] = [value, value]
+
+        self.sounds["arrow_shot"] = pygame.sndarray.make_sound(arrow_samples.astype(np.int16))
+
+        # ========== GALOPE DE CABALLO ==========
+        duration = 1.0
+        num_samples = int(sample_rate * duration)
+        horse_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        # Patrón de galope (4 golpes)
+        hoof_times = [0.0, 0.15, 0.35, 0.5, 0.65, 0.8]
+
+        for hoof_time in hoof_times:
+            hoof_start = int(hoof_time * sample_rate)
+            hoof_duration = int(0.05 * sample_rate)
+
+            for i in range(hoof_duration):
+                if hoof_start + i < num_samples:
+                    t = i / sample_rate
+
+                    # Impacto bajo
+                    impact = np.sin(2 * np.pi * 60 * t) * 15000 * np.exp(-t * 50)
+                    # Ruido de tierra
+                    dirt = np.random.randint(-3000, 3000) * np.exp(-t * 30)
+
+                    value = impact + dirt
+                    horse_samples[hoof_start + i] += [value, value * 0.9]
+
+        self.sounds["horse_gallop"] = pygame.sndarray.make_sound(horse_samples.astype(np.int16))
+
+        # ========== ESCUDO BLOQUEANDO ==========
+        duration = 0.2
+        num_samples = int(sample_rate * duration)
+        shield_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Impacto sordo
+            freq = 150 * (1 - t * 2)
+            tone = np.sin(2 * np.pi * freq * t) * 10000 * np.exp(-t * 20)
+
+            # Resonancia de madera
+            wood_freq = 300 * (1 - t)
+            wood = np.sin(2 * np.pi * wood_freq * t) * 5000 * np.exp(-t * 15)
+
+            # Ruido de impacto
+            impact_noise = np.random.randint(-4000, 4000) * np.exp(-t * 25)
+
+            value = tone + wood + impact_noise
+            shield_samples[i] = [value, value]
+
+        self.sounds["shield_block"] = pygame.sndarray.make_sound(shield_samples.astype(np.int16))
+
+        # ========== GRITO DE MUERTE ==========
+        duration = 1.2
+        num_samples = int(sample_rate * duration)
+        death_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Grito descendente
+            freq = 800 * (1 - t * 0.5)  # Frecuencia bajando
+            volume = 8000 * np.exp(-t * 0.8)  # Decayendo
+
+            # Voz con vibrato
+            vibrato = np.sin(2 * np.pi * 5 * t) * 50
+            voice = np.sin(2 * np.pi * (freq + vibrato) * t) * volume
+
+            # Añadir armónicos para voz más realista
+            harmonic2 = np.sin(2 * np.pi * (freq * 2) * t) * volume * 0.3
+            harmonic3 = np.sin(2 * np.pi * (freq * 3) * t) * volume * 0.1
+
+            value = voice + harmonic2 + harmonic3
+            death_samples[i] = [value, value]
+
+        self.sounds["death_scream"] = pygame.sndarray.make_sound(death_samples.astype(np.int16))
+
+        # ========== MARCHA DE LEGIÓN ==========
+        duration = 0.8
+        num_samples = int(sample_rate * duration)
+        march_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        # Dos pasos (izquierdo-derecho)
+        step_times = [0.0, 0.4]
+
+        for step_time in step_times:
+            step_start = int(step_time * sample_rate)
+            step_duration = int(0.15 * sample_rate)
+
+            for i in range(step_duration):
+                if step_start + i < num_samples:
+                    t = i / sample_rate
+
+                    # Impacto del paso
+                    impact = np.sin(2 * np.pi * 80 * t) * 8000 * np.exp(-t * 30)
+                    # Ruido de armadura
+                    armor = np.sin(2 * np.pi * 2000 * t) * 2000 * np.exp(-t * 50)
+                    # Tierra/arena
+                    ground = np.random.randint(-1500, 1500) * np.exp(-t * 20)
+
+                    value = impact + armor + ground
+
+                    # Pan estéreo para simular marcha
+                    if step_time == 0.0:  # Paso izquierdo
+                        march_samples[step_start + i] += [value * 1.2, value * 0.8]
+                    else:  # Paso derecho
+                        march_samples[step_start + i] += [value * 0.8, value * 1.2]
+
+        self.sounds["march"] = pygame.sndarray.make_sound(march_samples.astype(np.int16))
+
+        # ========== CUERNO DE GUERRA ==========
+        duration = 1.5
+        num_samples = int(sample_rate * duration)
+        horn_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Frecuencia fundamental del cuerno
+            freq = 220  # La3
+
+            # Envolvente ADSR
+            if t < 0.1:  # Attack
+                envelope = t * 10
+            elif t < 0.3:  # Decay
+                envelope = 1.0 - (t - 0.1) * 2
+            elif t < 1.2:  # Sustain
+                envelope = 0.6
+            else:  # Release
+                envelope = 0.6 * (1 - (t - 1.2) / 0.3)
+
+            # Tono principal con armónicos
+            fundamental = np.sin(2 * np.pi * freq * t)
+            harmonic2 = np.sin(2 * np.pi * freq * 2 * t) * 0.5
+            harmonic3 = np.sin(2 * np.pi * freq * 3 * t) * 0.3
+            harmonic4 = np.sin(2 * np.pi * freq * 4 * t) * 0.2
+
+            # Vibrato ligero
+            vibrato = np.sin(2 * np.pi * 4 * t) * 5
+
+            tone = (fundamental + harmonic2 + harmonic3 + harmonic4) * 10000 * envelope
+            tone = np.sin(2 * np.pi * (freq + vibrato) * t) * 10000 * envelope
+
+            # Reverb simple (eco)
+            if i > int(0.1 * sample_rate):
+                echo_idx = i - int(0.1 * sample_rate)
+                tone += horn_samples[echo_idx][0] * 0.3
+
+            value = np.clip(tone, -32768, 32767)
+            horn_samples[i] = [value, value]
+
+        self.sounds["horn"] = pygame.sndarray.make_sound(horn_samples.astype(np.int16))
+
+        # ========== GRITO DE BATALLA ==========
+        duration = 0.8
+        num_samples = int(sample_rate * duration)
+        warcry_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Grito ascendente y luego sostenido
+            if t < 0.2:
+                freq = 300 + t * 2000  # Subiendo
+                volume = t * 5 * 10000
+            else:
+                freq = 700  # Sostenido
+                volume = 10000 * np.exp(-(t - 0.2) * 2)
+
+            # Voz con mucho vibrato y roughness
+            vibrato = np.sin(2 * np.pi * 6 * t) * 30
+            roughness = np.random.randn() * 2000
+
+            voice = np.sin(2 * np.pi * (freq + vibrato) * t) * volume
+            voice += roughness
+
+            # Múltiples voces (coro)
+            voice2 = np.sin(2 * np.pi * (freq * 1.01 + vibrato) * t) * volume * 0.7
+            voice3 = np.sin(2 * np.pi * (freq * 0.99 + vibrato) * t) * volume * 0.7
+
+            value = np.clip(voice + voice2 + voice3, -32768, 32767)
+            warcry_samples[i] = [value, value]
+
+        self.sounds["battle_cry"] = pygame.sndarray.make_sound(warcry_samples.astype(np.int16))
+
+        # ========== SONIDOS AMBIENTALES ==========
+        # Viento
+        duration = 3.0
+        num_samples = int(sample_rate * duration)
+        wind_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Ruido filtrado para viento
+            wind = np.random.randn() * 2000
+            # Modulación lenta
+            modulation = np.sin(2 * np.pi * 0.3 * t) * 0.5 + 0.5
+
+            value = wind * modulation
+            wind_samples[i] = [value, value * 1.1]  # Ligero pan
+
+        self.sounds["wind"] = pygame.sndarray.make_sound(wind_samples.astype(np.int16))
+
+        # Batalla distante
+        duration = 2.0
+        num_samples = int(sample_rate * duration)
+        distant_samples = np.zeros((num_samples, 2), dtype=np.int16)
+
+        for i in range(num_samples):
+            t = i / sample_rate
+
+            # Mezcla de frecuencias bajas
+            rumble = np.sin(2 * np.pi * 40 * t) * 1000
+            rumble += np.sin(2 * np.pi * 60 * t) * 800
+            rumble += np.sin(2 * np.pi * 80 * t) * 600
+
+            # Ocasionales "golpes" aleatorios
+            if random.random() < 0.01:
+                rumble += np.random.randint(-3000, 3000)
+
+            # Envolvente ondulante
+            envelope = np.sin(2 * np.pi * 0.5 * t) * 0.3 + 0.7
+
+            value = rumble * envelope
+            distant_samples[i] = [value, value]
+
+        self.sounds["distant_battle"] = pygame.sndarray.make_sound(distant_samples.astype(np.int16))
+
+        print("[SOUND] Epic synthetic sounds created successfully!")
 
     def play_battle_sound(self, sound_type: str, position: Optional[tuple] = None):
         """Reproduce un sonido de batalla"""
