@@ -7,7 +7,8 @@ from enum import Enum
 
 
 class TipoUnidad(Enum):
-    """Tipos de unidades militares romanas"""
+    """Tipos de unidades militares romanas y galas"""
+    # Unidades Romanas
     LEGIONARIO = "legionario"          # Infantería básica
     HASTATI = "hastati"                # Infantería pesada
     TRIARII = "triarii"                # Piqueros veteranos
@@ -15,6 +16,15 @@ class TipoUnidad(Enum):
     SAGITTARII = "sagittarii"          # Arqueros
     VELITES = "velites"                # Infantería ligera con jabalinas
     PRINCEPS = "princeps"              # Infantería veterana
+
+    # Unidades Galas
+    GUERRERO_TRIBAL = "guerrero_tribal"        # Infantería básica gala
+    ESPADAS_ELEGIDAS = "espadas_elegidas"      # Infantería pesada élite
+    FANATICOS_DESNUDOS = "fanaticos_desnudos"  # Berserkers devastadores
+    ESCARAMUZADORES = "escaramuzadores"        # Honderos/jabalineros
+    CABALLERIA_BARBARA = "caballeria_barbara"  # Caballería ligera
+    CABALLERIA_NOBLE = "caballeria_noble"      # Caballería pesada élite
+    CARROS_GUERRA = "carros_guerra"            # Carros britanos
 
 
 class Bando(Enum):

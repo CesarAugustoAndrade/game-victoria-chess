@@ -119,9 +119,9 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.PRINCEPS, Posicion(7, 4)),
             ],
             unidades_enemigo=[
-                # 2 Guerreros básicos
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 4)),
+                # 2 Guerreros tribales galos
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 4)),
             ]
         )
 
@@ -147,10 +147,10 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.VELITES, Posicion(7, 5)),
             ],
             unidades_enemigo=[
-                # 3 Guerreros en formación
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 4)),
+                # 3 Guerreros tribales en formación
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 4)),
             ]
         )
 
@@ -179,11 +179,11 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.VELITES, Posicion(8, 5)),
             ],
             unidades_enemigo=[
-                # Enemigos más fuertes
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(1, 3)),
+                # Guerreros galos más fuertes
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(1, 3)),
             ]
         )
 
@@ -212,12 +212,12 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(7, 6)),
             ],
             unidades_enemigo=[
-                # Línea defensiva con arqueros
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(1, 1)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(1, 5)),
+                # Línea defensiva gala con escaramuzadores
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(1, 1)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(1, 5)),
             ]
         )
 
@@ -246,13 +246,13 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(7, 5)),
             ],
             unidades_enemigo=[
-                # Horda bárbara
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 1)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 5)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 0)),
+                # Horda gala con fanáticos
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 1)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 5)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_BARBARA, Posicion(1, 0)),
             ]
         )
 
@@ -283,14 +283,14 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(8, 4)),
             ],
             unidades_enemigo=[
-                # Ataque de caballería pesada
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(2, 1)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(2, 5)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 0)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 6)),
+                # Ataque de caballería gala
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_BARBARA, Posicion(2, 1)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_BARBARA, Posicion(2, 5)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 0)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 6)),
             ]
         )
 
@@ -330,20 +330,20 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(8, 5)),
             ],
             unidades_enemigo=[
-                # Horda bárbara masiva
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 1)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 5)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(1, 2)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(1, 3)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(1, 4)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 0)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 6)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 2)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 3)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 4)),
+                # Ejército galo completo
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 1)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 5)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(1, 2)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(1, 3)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(1, 4)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 0)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 6)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(0, 2)),
+                ConfiguracionUnidad(TipoUnidad.CARROS_GUERRA, Posicion(0, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(0, 4)),
             ]
         )
 
@@ -375,20 +375,20 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(7, 5)),
             ],
             unidades_enemigo=[
-                # Rodeando al jugador
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(3, 2)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(3, 3)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(3, 4)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(4, 1)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(4, 5)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(2, 0)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(2, 6)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(5, 1)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(5, 5)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(3, 1)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(3, 5)),
+                # Galos rodeando al jugador
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(3, 2)),
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(3, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(3, 4)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(4, 1)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(4, 5)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(2, 0)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(2, 6)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(5, 1)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(5, 5)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(3, 1)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(3, 5)),
             ]
         )
 
@@ -427,22 +427,22 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(8, 5)),
             ],
             unidades_enemigo=[
-                # Ejército enemigo masivo y balanceado
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 1)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 2)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 3)),
-                ConfiguracionUnidad(TipoUnidad.HASTATI, Posicion(2, 4)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(2, 5)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(1, 2)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(1, 3)),
-                ConfiguracionUnidad(TipoUnidad.LEGIONARIO, Posicion(1, 4)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 0)),
-                ConfiguracionUnidad(TipoUnidad.EQUITES, Posicion(1, 6)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 2)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 3)),
-                ConfiguracionUnidad(TipoUnidad.SAGITTARII, Posicion(0, 4)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(0, 1)),
-                ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(0, 5)),
+                # Ejército galo masivo y balanceado - batalla final
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 1)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 2)),
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(2, 4)),
+                ConfiguracionUnidad(TipoUnidad.FANATICOS_DESNUDOS, Posicion(2, 5)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(1, 2)),
+                ConfiguracionUnidad(TipoUnidad.ESPADAS_ELEGIDAS, Posicion(1, 3)),
+                ConfiguracionUnidad(TipoUnidad.GUERRERO_TRIBAL, Posicion(1, 4)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 0)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_NOBLE, Posicion(1, 6)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(0, 2)),
+                ConfiguracionUnidad(TipoUnidad.CARROS_GUERRA, Posicion(0, 3)),
+                ConfiguracionUnidad(TipoUnidad.ESCARAMUZADORES, Posicion(0, 4)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_BARBARA, Posicion(0, 1)),
+                ConfiguracionUnidad(TipoUnidad.CABALLERIA_BARBARA, Posicion(0, 5)),
             ]
         )
 
