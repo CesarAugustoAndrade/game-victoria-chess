@@ -414,6 +414,17 @@ class CombatZoomController:
         self.combat_active = False
         self.zoom_level = ZoomMode.NORMAL
         self.auto_zoom_enabled = True
+        self.combat_timer = 0.0
+        self.combat_duration = 1.0  # Segundos antes de retornar a normal
+
+    def update(self, delta_time: float):
+        """Actualiza el controlador de zoom de combate"""
+        if self.combat_active:
+            self.combat_timer += delta_time
+
+            # Retornar a zoom normal después de la duración
+            if self.combat_timer >= self.combat_duration:
+                self.end_combat()
 
     def start_combat(self, attacker_pos: Tuple[float, float],
                     defender_pos: Tuple[float, float]):
@@ -422,6 +433,7 @@ class CombatZoomController:
             return
 
         self.combat_active = True
+        self.combat_timer = 0.0  # Reset timer
 
         # Calcular punto medio entre atacante y defensor
         center_x = (attacker_pos[0] + defender_pos[0]) / 2

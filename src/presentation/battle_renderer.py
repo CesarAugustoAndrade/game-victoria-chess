@@ -95,6 +95,7 @@ class BattleRenderer:
 
         # Actualizar todos los sistemas
         self.camera.update(delta_time)
+        self.combat_zoom.update(delta_time)  # Actualizar zoom de combate
         self.animation_manager.update(delta_time)
         self.weather_system.update(delta_time)
         self.notification_system.update(delta_time)
