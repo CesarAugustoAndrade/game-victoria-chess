@@ -4,6 +4,7 @@ Sistema de UI Moderno con Efectos y Tooltips
 
 import pygame
 import math
+import random
 from typing import Optional, Tuple, List, Dict, Any, Callable
 from dataclasses import dataclass
 from enum import Enum
