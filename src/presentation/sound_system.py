@@ -117,12 +117,12 @@ class EpicSoundSystem:
 
             # Combinar
             value = tone1 + tone2 + tone3 + metallic_noise
-            value = np.clip(value, -32768, 32767)
+            value = int(np.clip(value, -32768, 32767))
 
             # Estéreo con ligera diferencia
-            sword_samples[i] = [value, value * 0.95]
+            sword_samples[i] = [value, int(value * 0.95)]
 
-        self.sounds["sword_hit"] = pygame.sndarray.make_sound(sword_samples.astype(np.int16))
+        self.sounds["sword_hit"] = pygame.sndarray.make_sound(sword_samples)
 
         # ========== FLECHA VOLANDO ==========
         duration = 0.5
@@ -142,10 +142,10 @@ class EpicSoundSystem:
             # Añadir algo de viento/silbido
             wind = np.random.randn() * 1000 * volume / 5000
 
-            value = tone + wind
+            value = int(np.clip(tone + wind, -32768, 32767))
             arrow_samples[i] = [value, value]
 
-        self.sounds["arrow_shot"] = pygame.sndarray.make_sound(arrow_samples.astype(np.int16))
+        self.sounds["arrow_shot"] = pygame.sndarray.make_sound(arrow_samples)
 
         # ========== GALOPE DE CABALLO ==========
         duration = 1.0
@@ -168,10 +168,10 @@ class EpicSoundSystem:
                     # Ruido de tierra
                     dirt = np.random.randint(-3000, 3000) * np.exp(-t * 30)
 
-                    value = impact + dirt
-                    horse_samples[hoof_start + i] += [value, value * 0.9]
+                    value = int(np.clip(impact + dirt, -32768, 32767))
+                    horse_samples[hoof_start + i] += np.array([value, int(value * 0.9)], dtype=np.int16)
 
-        self.sounds["horse_gallop"] = pygame.sndarray.make_sound(horse_samples.astype(np.int16))
+        self.sounds["horse_gallop"] = pygame.sndarray.make_sound(horse_samples)
 
         # ========== ESCUDO BLOQUEANDO ==========
         duration = 0.2
@@ -192,10 +192,10 @@ class EpicSoundSystem:
             # Ruido de impacto
             impact_noise = np.random.randint(-4000, 4000) * np.exp(-t * 25)
 
-            value = tone + wood + impact_noise
+            value = int(np.clip(tone + wood + impact_noise, -32768, 32767))
             shield_samples[i] = [value, value]
 
-        self.sounds["shield_block"] = pygame.sndarray.make_sound(shield_samples.astype(np.int16))
+        self.sounds["shield_block"] = pygame.sndarray.make_sound(shield_samples)
 
         # ========== GRITO DE MUERTE ==========
         duration = 1.2
@@ -217,10 +217,10 @@ class EpicSoundSystem:
             harmonic2 = np.sin(2 * np.pi * (freq * 2) * t) * volume * 0.3
             harmonic3 = np.sin(2 * np.pi * (freq * 3) * t) * volume * 0.1
 
-            value = voice + harmonic2 + harmonic3
+            value = int(np.clip(voice + harmonic2 + harmonic3, -32768, 32767))
             death_samples[i] = [value, value]
 
-        self.sounds["death_scream"] = pygame.sndarray.make_sound(death_samples.astype(np.int16))
+        self.sounds["death_scream"] = pygame.sndarray.make_sound(death_samples)
 
         # ========== MARCHA DE LEGIÓN ==========
         duration = 0.8
@@ -249,11 +249,15 @@ class EpicSoundSystem:
 
                     # Pan estéreo para simular marcha
                     if step_time == 0.0:  # Paso izquierdo
-                        march_samples[step_start + i] += [value * 1.2, value * 0.8]
+                        left = int(np.clip(value * 1.2, -32768, 32767))
+                        right = int(np.clip(value * 0.8, -32768, 32767))
+                        march_samples[step_start + i] += np.array([left, right], dtype=np.int16)
                     else:  # Paso derecho
-                        march_samples[step_start + i] += [value * 0.8, value * 1.2]
+                        left = int(np.clip(value * 0.8, -32768, 32767))
+                        right = int(np.clip(value * 1.2, -32768, 32767))
+                        march_samples[step_start + i] += np.array([left, right], dtype=np.int16)
 
-        self.sounds["march"] = pygame.sndarray.make_sound(march_samples.astype(np.int16))
+        self.sounds["march"] = pygame.sndarray.make_sound(march_samples)
 
         # ========== CUERNO DE GUERRA ==========
         duration = 1.5
@@ -293,10 +297,10 @@ class EpicSoundSystem:
                 echo_idx = i - int(0.1 * sample_rate)
                 tone += horn_samples[echo_idx][0] * 0.3
 
-            value = np.clip(tone, -32768, 32767)
+            value = int(np.clip(tone, -32768, 32767))
             horn_samples[i] = [value, value]
 
-        self.sounds["horn"] = pygame.sndarray.make_sound(horn_samples.astype(np.int16))
+        self.sounds["horn"] = pygame.sndarray.make_sound(horn_samples)
 
         # ========== GRITO DE BATALLA ==========
         duration = 0.8
@@ -325,10 +329,10 @@ class EpicSoundSystem:
             voice2 = np.sin(2 * np.pi * (freq * 1.01 + vibrato) * t) * volume * 0.7
             voice3 = np.sin(2 * np.pi * (freq * 0.99 + vibrato) * t) * volume * 0.7
 
-            value = np.clip(voice + voice2 + voice3, -32768, 32767)
+            value = int(np.clip(voice + voice2 + voice3, -32768, 32767))
             warcry_samples[i] = [value, value]
 
-        self.sounds["battle_cry"] = pygame.sndarray.make_sound(warcry_samples.astype(np.int16))
+        self.sounds["battle_cry"] = pygame.sndarray.make_sound(warcry_samples)
 
         # ========== SONIDOS AMBIENTALES ==========
         # Viento
@@ -344,10 +348,10 @@ class EpicSoundSystem:
             # Modulación lenta
             modulation = np.sin(2 * np.pi * 0.3 * t) * 0.5 + 0.5
 
-            value = wind * modulation
-            wind_samples[i] = [value, value * 1.1]  # Ligero pan
+            value = int(np.clip(wind * modulation, -32768, 32767))
+            wind_samples[i] = [value, int(value * 1.1) if value * 1.1 <= 32767 else 32767]
 
-        self.sounds["wind"] = pygame.sndarray.make_sound(wind_samples.astype(np.int16))
+        self.sounds["wind"] = pygame.sndarray.make_sound(wind_samples)
 
         # Batalla distante
         duration = 2.0
@@ -369,10 +373,10 @@ class EpicSoundSystem:
             # Envolvente ondulante
             envelope = np.sin(2 * np.pi * 0.5 * t) * 0.3 + 0.7
 
-            value = rumble * envelope
+            value = int(np.clip(rumble * envelope, -32768, 32767))
             distant_samples[i] = [value, value]
 
-        self.sounds["distant_battle"] = pygame.sndarray.make_sound(distant_samples.astype(np.int16))
+        self.sounds["distant_battle"] = pygame.sndarray.make_sound(distant_samples)
 
         print("[SOUND] Epic synthetic sounds created successfully!")
 
