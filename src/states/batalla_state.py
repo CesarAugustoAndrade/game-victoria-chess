@@ -26,6 +26,11 @@ class BatallaState(State):
         self.tutorial_index = 0  # Índice para mensajes de tutorial
         self.nivel_completado = False  # Flag para saber si ya se marcó como completado
 
+        # ===== SISTEMA DE AUTO-PLAY CON IA =====
+        self.auto_play_enabled = False  # Modo auto-play desactivado por defecto
+        self.auto_play_timer = 0  # Timer para retraso entre acciones
+        self.auto_play_delay = 0.5  # Segundos entre acciones de IA
+
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
         if self.nivel:
@@ -80,6 +85,24 @@ class BatallaState(State):
             elif event.key == pygame.K_t and self.nivel and self.nivel.es_tutorial:
                 # Mostrar siguiente mensaje de tutorial
                 self._mostrar_tutorial()
+
+            elif event.key == pygame.K_a:
+                # Activar/desactivar auto-play con IA agresiva
+                self.auto_play_enabled = not self.auto_play_enabled
+                if self.auto_play_enabled:
+                    self._mostrar_mensaje("🤖 AUTO-PLAY ACTIVADO - IA Agresiva jugando")
+                    self.renderer.notification_system.add_notification(
+                        "IA AGRESIVA ACTIVADA",
+                        (100, 255, 100),
+                        duration=2.0
+                    )
+                else:
+                    self._mostrar_mensaje("👤 AUTO-PLAY DESACTIVADO - Control manual")
+                    self.renderer.notification_system.add_notification(
+                        "CONTROL MANUAL",
+                        (255, 255, 100),
+                        duration=2.0
+                    )
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if batalla.turno_actual == TurnoActual.JUGADOR and not batalla.batalla_terminada:
@@ -293,6 +316,19 @@ class BatallaState(State):
             self.mensaje_actual = ""
             self.tiempo_mensaje = 0
 
+        # ===== SISTEMA DE AUTO-PLAY =====
+        if self.auto_play_enabled:
+            batalla = self.servicio_juego.obtener_batalla_actual()
+
+            # Solo ejecutar auto-play en turno del jugador y si la batalla no ha terminado
+            if batalla and batalla.turno_actual == TurnoActual.JUGADOR and not batalla.batalla_terminada:
+                self.auto_play_timer += dt
+
+                # Ejecutar acción de IA cuando pase el delay
+                if self.auto_play_timer >= self.auto_play_delay:
+                    self._ejecutar_ia_jugador()
+                    self.auto_play_timer = 0  # Reset timer
+
     def render(self, screen):
         """Renderiza la batalla"""
         batalla = self.servicio_juego.obtener_batalla_actual()
@@ -343,3 +379,30 @@ class BatallaState(State):
                 print(f"[BATALLA] Progreso guardado - Nivel {self.campania.nivel_actual + 1}")
             else:
                 print("[BATALLA] ERROR: No se pudo guardar el progreso")
+
+    def _ejecutar_ia_jugador(self):
+        """Ejecuta un turno de IA para el jugador usando estrategia agresiva"""
+        from src.domain.strategies import IAAgresiva
+
+        batalla = self.servicio_juego.obtener_batalla_actual()
+        if not batalla:
+            return
+
+        # Crear instancia de IA agresiva
+        ia = IAAgresiva()
+
+        # Ejecutar turno de IA para el jugador
+        eventos = ia.ejecutar_turno(
+            batalla.ejercito_jugador,
+            batalla.ejercito_enemigo,
+            batalla.tablero
+        )
+
+        # Si la IA no generó eventos (todas las unidades ya actuaron), finalizar turno
+        if not eventos:
+            print("[AUTO-PLAY] Turno completo, finalizando...")
+            eventos = self.servicio_juego.finalizar_turno()
+
+        # Procesar todos los eventos generados
+        self._procesar_eventos(eventos)
+        self._actualizar_highlights()

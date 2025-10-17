@@ -436,10 +436,11 @@ class BattleRenderer:
             "Click der: Atacar",
             "Espacio: Finalizar turno",
             "F: Cambiar formación",
+            "A: AUTO-PLAY (IA Agresiva)",
             "ESC: Menú"
         ]
 
-        y = self.screen_height - 150
+        y = self.screen_height - 175
         for control in controls:
             control_text = self.font_stats.render(control, True, (80, 60, 40))
             screen.blit(control_text, (20, y))
