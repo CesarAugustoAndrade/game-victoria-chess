@@ -4,11 +4,14 @@ Renderizador de batalla táctica para pygame
 
 import pygame
 import math
+import random
 from typing import Optional, List, Tuple
 from src.domain.batalla import Batalla
 from src.domain.value_objects import Posicion, Bando, TipoUnidad
 from src.domain.entities import Unidad
-from src.presentation.unit_sprites import UnitSpriteRenderer
+from src.presentation.sprite_loader import EpicSpriteLoader, SpriteEffects
+from src.presentation.particle_system import ParticleSystem, ParticleEffects
+from src.presentation.sound_system import EpicSoundSystem, WarCryGenerator
 
 
 class BattleRenderer:
@@ -46,32 +49,65 @@ class BattleRenderer:
         self.objetivos_atacables = []
         self.animaciones = []
 
-        # Sistema de sprites
-        self.sprite_renderer = UnitSpriteRenderer()
+        # Sistemas épicos
+        self.sprite_loader = EpicSpriteLoader()  # Nuevo sistema de sprites
+        self.particle_system = ParticleSystem(max_particles=2000)
+        self.sound_system = EpicSoundSystem()
+        self.sprite_effects = SpriteEffects()
+
+        # Animaciones activas
+        self.active_animations = []
+        self.combat_effects = []
+
+        # Estado de batalla épico
+        self.battle_intensity = 0  # 0-100 intensidad de batalla
+        self.screen_shake = 0  # Temblor de pantalla
+        self.last_war_cry_time = 0
 
     def render(self, screen: pygame.Surface, batalla: Optional[Batalla]):
-        """Renderiza la batalla completa"""
+        """Renderiza la batalla completa con efectos épicos"""
         if not batalla:
             self._render_no_battle(screen)
             return
 
+        # Aplicar screen shake si hay
+        shake_offset = self._calculate_screen_shake()
+
+        # Crear surface temporal si hay shake
+        if shake_offset != (0, 0):
+            temp_surface = pygame.Surface((self.screen_width, self.screen_height))
+            render_surface = temp_surface
+        else:
+            render_surface = screen
+
         # Fondo
-        self._render_background(screen)
+        self._render_background(render_surface)
 
         # Tablero
-        self._render_board(screen)
+        self._render_board(render_surface)
 
         # Casillas especiales (movimientos válidos, objetivos)
-        self._render_special_tiles(screen, batalla)
+        self._render_special_tiles(render_surface, batalla)
+
+        # Sistema de partículas (detrás de las unidades)
+        self.particle_system.update(0.016)  # ~60 FPS
+        self.particle_system.render(render_surface)
 
         # Unidades
-        self._render_units(screen, batalla)
+        self._render_units(render_surface, batalla)
+
+        # Efectos de combate
+        self._render_combat_effects(render_surface)
 
         # UI
-        self._render_ui(screen, batalla)
+        self._render_ui(render_surface, batalla)
 
         # Animaciones
-        self._render_animations(screen)
+        self._render_animations(render_surface)
+
+        # Si hubo shake, aplicar el offset
+        if shake_offset != (0, 0):
+            screen.blit(render_surface, shake_offset)
 
     def _render_background(self, screen: pygame.Surface):
         """Renderiza el fondo"""
@@ -157,8 +193,8 @@ class BattleRenderer:
         x = self.board_offset_x + unidad.posicion.columna * self.tile_size
         y = self.board_offset_y + unidad.posicion.fila * self.tile_size
 
-        # Obtener sprite de la unidad
-        sprite = self.sprite_renderer.get_unit_sprite(
+        # Obtener sprite de la unidad (ahora con soporte de imágenes!)
+        sprite = self.sprite_loader.get_unit_sprite(
             unidad.tipo,
             unidad.bando,
             size=self.tile_size - 10  # Un poco más pequeño que la casilla
@@ -372,9 +408,53 @@ class BattleRenderer:
         screen.blit(text, rect)
 
     def _render_animations(self, screen: pygame.Surface):
-        """Renderiza animaciones activas"""
-        # Por ahora vacío, se implementarán las animaciones después
-        pass
+        """Renderiza animaciones activas épicas"""
+        for animation in self.active_animations[:]:
+            animation.update(0.016)
+            if not animation.finished:
+                frame = animation.get_current_frame()
+                if frame:
+                    screen.blit(frame, animation.position)
+            else:
+                self.active_animations.remove(animation)
+
+    def _render_combat_effects(self, screen: pygame.Surface):
+        """Renderiza efectos de combate épicos"""
+        for effect in self.combat_effects[:]:
+            effect['duration'] -= 0.016
+            if effect['duration'] > 0:
+                # Renderizar según tipo de efecto
+                if effect['type'] == 'slash':
+                    self._render_slash_effect(screen, effect)
+                elif effect['type'] == 'impact':
+                    self._render_impact_effect(screen, effect)
+            else:
+                self.combat_effects.remove(effect)
+
+    def _calculate_screen_shake(self) -> Tuple[int, int]:
+        """Calcula el offset de screen shake"""
+        if self.screen_shake > 0:
+            self.screen_shake -= 0.5
+            offset_x = random.randint(-int(self.screen_shake), int(self.screen_shake))
+            offset_y = random.randint(-int(self.screen_shake), int(self.screen_shake))
+            return (offset_x, offset_y)
+        return (0, 0)
+
+    def _render_slash_effect(self, screen: pygame.Surface, effect: dict):
+        """Renderiza efecto de corte"""
+        alpha = int(255 * effect['duration'] / effect['max_duration'])
+        slash_surface = pygame.Surface((80, 80), pygame.SRCALPHA)
+        pygame.draw.arc(slash_surface, (255, 255, 255, alpha),
+                       pygame.Rect(10, 10, 60, 60),
+                       effect['start_angle'], effect['end_angle'], 3)
+        screen.blit(slash_surface, effect['position'])
+
+    def _render_impact_effect(self, screen: pygame.Surface, effect: dict):
+        """Renderiza efecto de impacto"""
+        alpha = int(255 * effect['duration'] / effect['max_duration'])
+        radius = int(20 * (1 - effect['duration'] / effect['max_duration']))
+        pygame.draw.circle(screen, (*effect['color'], alpha),
+                          effect['position'], radius, 2)
 
     def set_highlights(self, movimientos: List[Posicion], objetivos: List[Unidad]):
         """Establece las casillas resaltadas"""
@@ -390,3 +470,151 @@ class BattleRenderer:
         if 0 <= row < self.board_height and 0 <= col < self.board_width:
             return Posicion(row, col)
         return None
+
+    # ========== MÉTODOS ÉPICOS PARA EFECTOS ==========
+
+    def trigger_attack_effect(self, attacker_pos: Posicion, target_pos: Posicion,
+                             attacker_type: TipoUnidad, damage: int):
+        """Dispara efectos visuales y sonoros de ataque"""
+        # Posición en pantalla
+        ax = self.board_offset_x + attacker_pos.columna * self.tile_size + self.tile_size // 2
+        ay = self.board_offset_y + attacker_pos.fila * self.tile_size + self.tile_size // 2
+        tx = self.board_offset_x + target_pos.columna * self.tile_size + self.tile_size // 2
+        ty = self.board_offset_y + target_pos.fila * self.tile_size + self.tile_size // 2
+
+        # Efectos según tipo de atacante
+        if attacker_type == TipoUnidad.SAGITTARII:
+            # Flecha volando
+            ParticleEffects.create_arrow_trail(self.particle_system, ax, ay)
+            self.sound_system.play_battle_sound("arrow_shot", (ax, ay))
+
+        elif attacker_type == TipoUnidad.EQUITES:
+            # Carga de caballería
+            self.screen_shake = 10
+            ParticleEffects.create_dust_cloud(self.particle_system, tx, ty)
+            self.sound_system.play_battle_sound("horse_gallop", (ax, ay))
+
+        else:
+            # Ataque cuerpo a cuerpo
+            self.combat_effects.append({
+                'type': 'slash',
+                'position': (tx - 40, ty - 40),
+                'start_angle': -0.5,
+                'end_angle': 1.0,
+                'duration': 0.3,
+                'max_duration': 0.3
+            })
+            self.sound_system.play_battle_sound("sword_hit", (tx, ty))
+
+        # Efectos de impacto
+        if damage > 20:
+            # Daño alto = más efectos
+            ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
+            self.screen_shake = min(15, self.screen_shake + damage / 5)
+        else:
+            ParticleEffects.create_spark_burst(self.particle_system, tx, ty)
+
+        # Incrementar intensidad de batalla
+        self.battle_intensity = min(100, self.battle_intensity + 10)
+
+    def trigger_unit_death(self, unit_pos: Posicion, unit_type: TipoUnidad):
+        """Efectos cuando muere una unidad"""
+        x = self.board_offset_x + unit_pos.columna * self.tile_size + self.tile_size // 2
+        y = self.board_offset_y + unit_pos.fila * self.tile_size + self.tile_size // 2
+
+        # Explosión de partículas rojas
+        ParticleEffects.create_blood_explosion(self.particle_system, x, y)
+
+        # Sonido de muerte
+        self.sound_system.play_unit_sound(unit_type, "death")
+
+        # Screen shake proporcional
+        self.screen_shake = 8
+
+        # Efecto de impacto
+        self.combat_effects.append({
+            'type': 'impact',
+            'position': (x, y),
+            'color': (180, 0, 0),
+            'duration': 0.5,
+            'max_duration': 0.5
+        })
+
+    def trigger_unit_move(self, unit_pos: Posicion, unit_type: TipoUnidad):
+        """Efectos cuando se mueve una unidad"""
+        x = self.board_offset_x + unit_pos.columna * self.tile_size + self.tile_size // 2
+        y = self.board_offset_y + unit_pos.fila * self.tile_size + self.tile_size // 2
+
+        # Polvo al moverse
+        if unit_type == TipoUnidad.EQUITES:
+            ParticleEffects.create_dust_cloud(self.particle_system, x, y + 20)
+            self.sound_system.play_battle_sound("horse_gallop", (x, y))
+        else:
+            # Sonido de marcha
+            if random.random() < 0.3:  # No siempre, para no saturar
+                self.sound_system.play_battle_sound("march", (x, y))
+
+    def trigger_formation_change(self, formation: str):
+        """Efectos al cambiar formación"""
+        # Sonido de cuerno
+        self.sound_system.play_formation_sound(formation)
+
+        # Efecto visual en todas las unidades romanas
+        self.battle_intensity = min(100, self.battle_intensity + 20)
+
+        # Mensaje épico
+        if formation == "testudo":
+            self.trigger_war_cry("TESTUDO FORMATION!")
+        elif formation == "cuneus":
+            self.trigger_war_cry("CUNEUS! CHARGE!")
+
+    def trigger_war_cry(self, message: str = None):
+        """Dispara un grito de guerra épico"""
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_war_cry_time > 3000:  # Max uno cada 3 segundos
+            self.last_war_cry_time = current_time
+
+            # Sonido
+            self.sound_system.play_war_cry(True)
+
+            # Screen shake leve
+            self.screen_shake = 5
+
+            # Partículas en centro de pantalla
+            cx = self.screen_width // 2
+            cy = self.screen_height // 3
+            ParticleEffects.create_magic_aura(self.particle_system, cx, cy, (255, 215, 0))
+
+    def trigger_victory_effects(self):
+        """Efectos épicos de victoria"""
+        # Fuegos artificiales
+        for _ in range(3):
+            x = random.randint(200, self.screen_width - 200)
+            y = random.randint(100, 300)
+            ParticleEffects.create_victory_celebration(self.particle_system, x, y)
+
+        # Música de victoria
+        self.sound_system.play_music("victory")
+
+        # Reset intensidad
+        self.battle_intensity = 0
+
+    def trigger_defeat_effects(self):
+        """Efectos de derrota"""
+        # Música triste
+        self.sound_system.play_music("defeat")
+
+        # Partículas oscuras
+        for _ in range(5):
+            x = random.randint(0, self.screen_width)
+            y = random.randint(0, self.screen_height // 2)
+            ParticleEffects.create_dust_cloud(self.particle_system, x, y)
+
+    def update_battle_ambience(self):
+        """Actualiza el ambiente de batalla"""
+        if self.battle_intensity > 0:
+            self.battle_intensity -= 0.1
+
+            # Sonidos ambientales según intensidad
+            if self.battle_intensity > 50 and random.random() < 0.01:
+                self.sound_system.play_ambient_battle()

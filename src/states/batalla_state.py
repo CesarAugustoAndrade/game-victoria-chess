@@ -174,18 +174,63 @@ class BatallaState(State):
         self._procesar_eventos(eventos)
 
     def _procesar_eventos(self, eventos):
-        """Procesa eventos del dominio"""
+        """Procesa eventos del dominio con EFECTOS ÉPICOS"""
+        batalla = self.servicio_juego.obtener_batalla_actual()
+        if not batalla:
+            return
+
         for evento in eventos:
             # Mostrar mensajes según el tipo de evento
             if isinstance(evento, EventoBatallaIniciada):
                 self._mostrar_mensaje(evento.mensaje)
+                # Grito de guerra inicial!
+                self.renderer.trigger_war_cry("ROMA INVICTA!")
 
             elif isinstance(evento, EventoAtaqueRealizado):
                 if evento.grito_guerra:
                     self._mostrar_mensaje(evento.grito_guerra)
 
+                # EFECTOS DE COMBATE ÉPICOS
+                # Buscar las unidades para obtener sus posiciones
+                atacante = None
+                defensor = None
+
+                # Buscar en ambos ejércitos
+                for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
+                    if unidad.id == evento.resultado.atacante_id:
+                        atacante = unidad
+                    if unidad.id == evento.resultado.defensor_id:
+                        defensor = unidad
+
+                if atacante and defensor:
+                    self.renderer.trigger_attack_effect(
+                        atacante.posicion,
+                        defensor.posicion,
+                        atacante.tipo,
+                        evento.resultado.danio_infligido
+                    )
+
             elif isinstance(evento, EventoUnidadEliminada):
                 self._mostrar_mensaje(evento.mensaje)
+
+                # Efectos de muerte épicos
+                # Buscar la unidad eliminada para su posición
+                for ejercito in [batalla.ejercito_jugador, batalla.ejercito_enemigo]:
+                    for unidad in ejercito._unidades:  # Incluir muertas
+                        if unidad.id == evento.unidad_id:
+                            self.renderer.trigger_unit_death(unidad.posicion, unidad.tipo)
+                            break
+
+            elif isinstance(evento, EventoUnidadMovida):
+                # Efectos de movimiento
+                unidad_movida = None
+                for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
+                    if unidad.id == evento.unidad_id:
+                        unidad_movida = unidad
+                        break
+
+                if unidad_movida:
+                    self.renderer.trigger_unit_move(evento.posicion_destino, unidad_movida.tipo)
 
             elif isinstance(evento, EventoBatallaTerminada):
                 self._mostrar_mensaje(evento.mensaje)
@@ -199,16 +244,21 @@ class BatallaState(State):
                         self._mostrar_mensaje(f"¡NIVEL {self.nivel.numero} COMPLETADO! Presiona ESC para continuar")
                     else:
                         self._mostrar_mensaje("¡VICTORIA! Presiona R para jugar de nuevo")
+                    # Trigger epic victory effects
+                    self.renderer.trigger_victory_effects()
                 else:
                     self._mostrar_mensaje("¡DERROTA! Presiona R para intentar de nuevo")
+                    self.renderer.trigger_defeat_effects()
 
             elif isinstance(evento, EventoFormacionAplicada):
                 self._mostrar_mensaje(evento.mensaje)
+                self.renderer.trigger_formation_change(evento.formacion)
 
             elif isinstance(evento, EventoUnidadEnPanico):
                 self._mostrar_mensaje(evento.mensaje)
-
-            # Aquí se pueden agregar animaciones para cada evento
+                # Efecto de pánico - partículas de miedo
+                import random
+                self.renderer.screen_shake = 3
 
     def _actualizar_highlights(self):
         """Actualiza las casillas resaltadas"""
