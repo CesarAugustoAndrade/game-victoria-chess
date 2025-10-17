@@ -13,6 +13,8 @@ class TipoUnidad(Enum):
     TRIARII = "triarii"                # Piqueros veteranos
     EQUITES = "equites"                # Caballería
     SAGITTARII = "sagittarii"          # Arqueros
+    VELITES = "velites"                # Infantería ligera con jabalinas
+    PRINCEPS = "princeps"              # Infantería veterana
 
 
 class Bando(Enum):

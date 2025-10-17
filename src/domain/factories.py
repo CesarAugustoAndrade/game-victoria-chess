@@ -57,6 +57,24 @@ class FabricaEjercito:
             rango_ataque=3,  # Ataque a distancia
             bonus_contra_caballeria=0,
             moral=70
+        ),
+        TipoUnidad.VELITES: EstadisticasUnidad(
+            vida_maxima=60,
+            ataque=18,
+            defensa=6,
+            rango_movimiento=3,  # Muy móviles
+            rango_ataque=2,  # Jabalinas de medio alcance
+            bonus_contra_caballeria=0,
+            moral=65
+        ),
+        TipoUnidad.PRINCEPS: EstadisticasUnidad(
+            vida_maxima=130,
+            ataque=28,
+            defensa=14,
+            rango_movimiento=2,
+            rango_ataque=1,
+            bonus_contra_caballeria=0,
+            moral=95  # Veteranos experimentados
         )
     }
 
@@ -101,6 +119,22 @@ class FabricaEjercito:
             color_principal=(140, 25, 25),
             color_secundario=(139, 69, 19),    # Marrón
             grito_guerra="SAGITTAE VOLANT!"
+        ),
+        TipoUnidad.VELITES: VisualizacionUnidad(
+            nombre="Velites",
+            nombre_latino="Veles",
+            icono="🎯",
+            color_principal=(170, 40, 40),
+            color_secundario=(210, 180, 140),  # Tan (cuero)
+            grito_guerra="CELER ET AUDAX!"  # Rápido y audaz
+        ),
+        TipoUnidad.PRINCEPS: VisualizacionUnidad(
+            nombre="Princeps",
+            nombre_latino="Princeps",
+            icono="⚔",
+            color_principal=(160, 20, 20),
+            color_secundario=(218, 165, 32),   # Dorado oscuro
+            grito_guerra="VIRTUS ET HONOR!"  # Virtud y honor
         )
     }
 
@@ -145,6 +179,22 @@ class FabricaEjercito:
             color_principal=(50, 80, 50),
             color_secundario=(150, 150, 150),
             grito_guerra="FLECHAS!"
+        ),
+        TipoUnidad.VELITES: VisualizacionUnidad(
+            nombre="Hostigador",
+            nombre_latino="Vexator",
+            icono="🎯",
+            color_principal=(70, 90, 60),
+            color_secundario=(160, 140, 100),
+            grito_guerra="LANZAS!"
+        ),
+        TipoUnidad.PRINCEPS: VisualizacionUnidad(
+            nombre="Campeón",
+            nombre_latino="Praelium",
+            icono="⚔",
+            color_principal=(90, 70, 50),
+            color_secundario=(200, 180, 150),
+            grito_guerra="MUERTE A ROMA!"
         )
     }
 
@@ -155,17 +205,17 @@ class FabricaEjercito:
 
         # Formación clásica romana: Triplex Acies (tres líneas)
         formacion = [
-            # Primera línea - Hastati (jóvenes)
-            (TipoUnidad.HASTATI, Posicion(6, 1)),
+            # Primera línea - Velites (escaramuzadores) y Hastati (jóvenes)
+            (TipoUnidad.VELITES, Posicion(6, 1)),
             (TipoUnidad.HASTATI, Posicion(6, 2)),
             (TipoUnidad.HASTATI, Posicion(6, 3)),
             (TipoUnidad.HASTATI, Posicion(6, 4)),
-            (TipoUnidad.HASTATI, Posicion(6, 5)),
+            (TipoUnidad.VELITES, Posicion(6, 5)),
 
-            # Segunda línea - Legionarios (veteranos)
-            (TipoUnidad.LEGIONARIO, Posicion(7, 2)),
-            (TipoUnidad.LEGIONARIO, Posicion(7, 3)),
-            (TipoUnidad.LEGIONARIO, Posicion(7, 4)),
+            # Segunda línea - Princeps (veteranos)
+            (TipoUnidad.PRINCEPS, Posicion(7, 2)),
+            (TipoUnidad.PRINCEPS, Posicion(7, 3)),
+            (TipoUnidad.PRINCEPS, Posicion(7, 4)),
 
             # Tercera línea - Triarii (élite)
             (TipoUnidad.TRIARII, Posicion(8, 2)),
@@ -275,6 +325,31 @@ class FabricaEjercito:
                 bando,
                 posicion,
                 visual[tipo]
+            )
+            ejercito.agregar_unidad(unidad)
+
+        return ejercito
+
+    @staticmethod
+    def crear_ejercito_desde_nivel(
+        bando: Bando,
+        configuraciones_unidades: list
+    ) -> Ejercito:
+        """Crea un ejército desde configuraciones de nivel"""
+        from src.domain.levels import ConfiguracionUnidad
+
+        ejercito = Ejercito(bando)
+        visual = (FabricaEjercito.VISUAL_ROMA
+                 if bando == Bando.ROMA
+                 else FabricaEjercito.VISUAL_BARBAROS)
+
+        for idx, config in enumerate(configuraciones_unidades):
+            unidad = FabricaEjercito._crear_unidad(
+                f"{bando.value}-nivel-{idx}",
+                config.tipo,
+                bando,
+                config.posicion,
+                visual[config.tipo]
             )
             ejercito.agregar_unidad(unidad)
 

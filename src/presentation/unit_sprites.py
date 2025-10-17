@@ -49,6 +49,12 @@ class UnitSpriteRenderer:
         elif tipo == TipoUnidad.SAGITTARII:
             self._draw_archer(surface, center, size, is_roman=True)
 
+        elif tipo == TipoUnidad.VELITES:
+            self._draw_velites(surface, center, size, is_roman=True)
+
+        elif tipo == TipoUnidad.PRINCEPS:
+            self._draw_princeps(surface, center, size, is_roman=True)
+
     def _draw_barbarian_unit(self, surface: pygame.Surface, tipo: TipoUnidad, size: int):
         """Dibuja unidades bárbaras con estilo distintivo"""
         center = size // 2
@@ -67,6 +73,12 @@ class UnitSpriteRenderer:
 
         elif tipo == TipoUnidad.SAGITTARII:
             self._draw_archer(surface, center, size, is_roman=False)
+
+        elif tipo == TipoUnidad.VELITES:
+            self._draw_velites(surface, center, size, is_roman=False)
+
+        elif tipo == TipoUnidad.PRINCEPS:
+            self._draw_princeps(surface, center, size, is_roman=False)
 
     def _draw_legionary(self, surface: pygame.Surface, center: int, size: int, is_roman: bool):
         """Dibuja un legionario romano"""
@@ -396,3 +408,149 @@ class UnitSpriteRenderer:
         # Piernas
         pygame.draw.line(surface, primary, (center - 6, center + 12), (center - 6, center + 22), 5)
         pygame.draw.line(surface, primary, (center + 6, center + 12), (center + 6, center + 22), 5)
+
+    def _draw_velites(self, surface: pygame.Surface, center: int, size: int, is_roman: bool):
+        """Dibuja un Veles - infantería ligera con jabalinas"""
+        # Colores
+        primary = (170, 40, 40) if is_roman else (70, 90, 60)
+        secondary = (210, 180, 140) if is_roman else (160, 140, 100)  # Cuero
+        javelin_color = (101, 67, 33)
+
+        # Cuerpo ligero (sin armadura pesada)
+        body_rect = pygame.Rect(center - 10, center - 6, 20, 16)
+        pygame.draw.rect(surface, primary, body_rect)
+        pygame.draw.rect(surface, secondary, body_rect, 1)
+
+        # Escudo pequeño de cuero (parma)
+        pygame.draw.circle(surface, secondary, (center - 14, center), 8)
+        pygame.draw.circle(surface, primary, (center - 14, center), 8, 2)
+        # Diseño en el escudo
+        pygame.draw.circle(surface, primary, (center - 14, center), 3)
+
+        # Jabalina principal en la mano
+        javelin_start = (center + 6, center + 8)
+        javelin_end = (center + 16, center - 20)
+        pygame.draw.line(surface, javelin_color, javelin_start, javelin_end, 2)
+        # Punta de jabalina metálica
+        javelin_tip = [
+            (center + 16, center - 22),
+            (center + 14, center - 20),
+            (center + 18, center - 20)
+        ]
+        pygame.draw.polygon(surface, (150, 150, 150), javelin_tip)
+
+        # Jabalina extra en la espalda
+        pygame.draw.line(surface, javelin_color,
+                        (center + 8, center - 8),
+                        (center + 12, center - 16), 2)
+
+        # Espada corta (gladius) en el cinturón
+        sword_rect = pygame.Rect(center - 4, center + 4, 2, 8)
+        pygame.draw.rect(surface, (150, 150, 150), sword_rect)
+
+        # Casco ligero o gorro de cuero
+        if is_roman:
+            helmet_rect = pygame.Rect(center - 6, center - 13, 12, 7)
+            pygame.draw.ellipse(surface, (120, 100, 80), helmet_rect)
+        else:
+            # Gorro de cuero para bárbaros
+            hood_points = [
+                (center - 6, center - 10),
+                (center, center - 13),
+                (center + 6, center - 10)
+            ]
+            pygame.draw.polygon(surface, secondary, hood_points)
+
+        # Piernas (ligeras, rápidas)
+        pygame.draw.line(surface, primary, (center - 4, center + 8), (center - 4, center + 18), 3)
+        pygame.draw.line(surface, primary, (center + 4, center + 8), (center + 4, center + 18), 3)
+
+        # Sandalias
+        pygame.draw.circle(surface, secondary, (center - 4, center + 18), 2)
+        pygame.draw.circle(surface, secondary, (center + 4, center + 18), 2)
+
+    def _draw_princeps(self, surface: pygame.Surface, center: int, size: int, is_roman: bool):
+        """Dibuja un Princeps - infantería veterana"""
+        # Colores
+        primary = (160, 20, 20) if is_roman else (90, 70, 50)
+        secondary = (218, 165, 32) if is_roman else (200, 180, 150)  # Dorado oscuro
+        armor_color = (130, 130, 130)
+
+        # Cuerpo con lorica segmentata (armadura de placas)
+        body_rect = pygame.Rect(center - 13, center - 9, 26, 22)
+        pygame.draw.rect(surface, armor_color, body_rect)
+        pygame.draw.rect(surface, primary, body_rect, 3)
+
+        # Placas de armadura (detalles horizontales)
+        for i in range(4):
+            y = center - 7 + i * 5
+            pygame.draw.line(surface, secondary, (center - 11, y), (center + 11, y), 1)
+
+        # Escudo grande rectangular (scutum)
+        shield_rect = pygame.Rect(center - 19, center - 11, 11, 24)
+        pygame.draw.rect(surface, primary, shield_rect)
+        pygame.draw.rect(surface, secondary, shield_rect, 2)
+
+        # Águila o decoración en el escudo (solo romanos)
+        if is_roman:
+            # Águila estilizada
+            pygame.draw.circle(surface, secondary, (center - 13, center - 2), 2)
+            pygame.draw.line(surface, secondary,
+                           (center - 13, center),
+                           (center - 13, center + 6), 2)
+            # Alas
+            pygame.draw.line(surface, secondary,
+                           (center - 13, center + 2),
+                           (center - 16, center + 4), 1)
+            pygame.draw.line(surface, secondary,
+                           (center - 13, center + 2),
+                           (center - 10, center + 4), 1)
+
+        # Gladius (espada) desenvainada
+        sword_start = (center + 9, center)
+        sword_end = (center + 16, center - 12)
+        pygame.draw.line(surface, (150, 150, 150), sword_start, sword_end, 3)
+        # Empuñadura dorada
+        pygame.draw.circle(surface, secondary, (center + 10, center + 2), 3)
+        # Pomo
+        pygame.draw.circle(surface, secondary, sword_end, 2)
+
+        # Casco imperial con cresta transversal
+        helmet_rect = pygame.Rect(center - 9, center - 17, 18, 10)
+        pygame.draw.ellipse(surface, armor_color, helmet_rect)
+        pygame.draw.ellipse(surface, secondary, helmet_rect, 2)
+
+        # Cresta transversal (crista transversa) - distintivo de los Principes
+        if is_roman:
+            crest_color = (200, 0, 0)  # Rojo intenso
+            for i in range(7):
+                x = center - 6 + i * 2
+                y_base = center - 19
+                y_top = y_base - 4 - abs(3 - i)  # Forma arqueada
+                pygame.draw.line(surface, crest_color, (x, y_base), (x, y_top), 2)
+        else:
+            # Cuernos o decoración bárbara
+            pygame.draw.arc(surface, secondary,
+                          pygame.Rect(center - 10, center - 22, 6, 6),
+                          0, math.pi, 2)
+            pygame.draw.arc(surface, secondary,
+                          pygame.Rect(center + 4, center - 22, 6, 6),
+                          0, math.pi, 2)
+
+        # Protección de piernas (grebas)
+        greave_color = armor_color if is_roman else primary
+        pygame.draw.rect(surface, greave_color, (center - 6, center + 11, 4, 11))
+        pygame.draw.rect(surface, greave_color, (center + 2, center + 11, 4, 11))
+        pygame.draw.rect(surface, secondary, (center - 6, center + 11, 4, 11), 1)
+        pygame.draw.rect(surface, secondary, (center + 2, center + 11, 4, 11), 1)
+
+        # Capa roja (distintivo de veteranos)
+        if is_roman:
+            cape_points = [
+                (center - 10, center - 5),
+                (center - 12, center + 8),
+                (center - 8, center + 10),
+                (center - 6, center)
+            ]
+            pygame.draw.polygon(surface, (180, 0, 0), cape_points)
+            pygame.draw.polygon(surface, secondary, cape_points, 1)

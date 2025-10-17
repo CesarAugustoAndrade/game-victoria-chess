@@ -229,13 +229,18 @@ class BattleRenderer:
         health_percentage = unidad.porcentaje_vida
         current_width = int(bar_width * health_percentage)
 
-        # Color según vida
-        if health_percentage > 0.6:
-            health_color = (0, 200, 0)
-        elif health_percentage > 0.3:
-            health_color = (255, 200, 0)
-        else:
+        # Color según bando
+        if unidad.bando == Bando.BARBAROS:
+            # Enemigos siempre rojos
             health_color = (255, 0, 0)
+        else:
+            # Aliados con colores según vida
+            if health_percentage > 0.6:
+                health_color = (0, 200, 0)
+            elif health_percentage > 0.3:
+                health_color = (255, 200, 0)
+            else:
+                health_color = (255, 0, 0)
 
         if current_width > 0:
             pygame.draw.rect(screen, health_color, (bar_x, bar_y, current_width, bar_height))
