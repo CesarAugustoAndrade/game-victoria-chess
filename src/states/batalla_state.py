@@ -381,28 +381,95 @@ class BatallaState(State):
                 print("[BATALLA] ERROR: No se pudo guardar el progreso")
 
     def _ejecutar_ia_jugador(self):
-        """Ejecuta un turno de IA para el jugador usando estrategia agresiva"""
-        from src.domain.strategies import IAAgresiva
+        """Ejecuta UNA acción de IA (como humano: un movimiento a la vez)"""
+        from src.domain.services import CalculadorPrioridad, CalculadorCombate, CalculadorMovimiento
 
         batalla = self.servicio_juego.obtener_batalla_actual()
         if not batalla:
             return
 
-        # Crear instancia de IA agresiva
-        ia = IAAgresiva()
+        # Buscar la primera unidad que pueda actuar
+        unidades_disponibles = [u for u in batalla.ejercito_jugador.unidades_vivas
+                               if not u.esta_en_panico]
 
-        # Ejecutar turno de IA para el jugador
-        eventos = ia.ejecutar_turno(
-            batalla.ejercito_jugador,
-            batalla.ejercito_enemigo,
-            batalla.tablero
-        )
+        # Ordenar por agresividad (igual que IAAgresiva)
+        def agresividad(unidad):
+            if unidad.tipo.value == "equites":
+                return 3
+            elif unidad.tipo.value == "sagittarii":
+                return 2
+            else:
+                return 1
 
-        # Si la IA no generó eventos (todas las unidades ya actuaron), finalizar turno
-        if not eventos:
-            print("[AUTO-PLAY] Turno completo, finalizando...")
-            eventos = self.servicio_juego.finalizar_turno()
+        unidades_disponibles.sort(key=agresividad, reverse=True)
 
-        # Procesar todos los eventos generados
+        # Buscar primera unidad que pueda hacer algo
+        for unidad in unidades_disponibles:
+            eventos = []
+
+            # Prioridad 1: Atacar si puede
+            if unidad.puede_actuar:
+                objetivos = unidad.obtener_objetivos_atacables(
+                    batalla.ejercito_enemigo.unidades_vivas
+                )
+
+                if objetivos:
+                    mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
+                        unidad, objetivos
+                    )
+
+                    if mejor_objetivo:
+                        print(f"[AUTO-PLAY] {unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}")
+
+                        resultado = CalculadorCombate.ejecutar_ataque(unidad, mejor_objetivo)
+                        eventos.append(EventoAtaqueRealizado(
+                            resultado,
+                            grito_guerra=unidad.visualizacion.grito_guerra
+                        ))
+
+                        if resultado.objetivo_eliminado:
+                            eventos.append(EventoUnidadEliminada(
+                                mejor_objetivo.id,
+                                mejor_objetivo.bando,
+                                mejor_objetivo.tipo.value,
+                                "¡Enemigo eliminado!"
+                            ))
+
+                        # Procesar y salir (solo una acción)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                        return
+
+            # Prioridad 2: Moverse si puede
+            if unidad.puede_moverse:
+                movimientos = unidad.obtener_posiciones_movimiento_validas(batalla.tablero)
+
+                if movimientos:
+                    mejor_movimiento = CalculadorMovimiento.seleccionar_mejor_movimiento(
+                        unidad, movimientos, batalla.ejercito_enemigo.unidades_vivas
+                    )
+
+                    if mejor_movimiento:
+                        print(f"[AUTO-PLAY] {unidad.visualizacion.nombre} se mueve")
+
+                        posicion_origen = unidad.posicion
+                        unidad.mover_a(mejor_movimiento)
+                        batalla.tablero.actualizar_posicion(unidad.id, posicion_origen, mejor_movimiento)
+
+                        eventos.append(EventoUnidadMovida(
+                            unidad.id,
+                            posicion_origen,
+                            mejor_movimiento,
+                            unidad.tipo.value
+                        ))
+
+                        # Procesar y salir (solo una acción)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                        return
+
+        # Si llegamos aquí, ninguna unidad puede actuar -> finalizar turno
+        print("[AUTO-PLAY] No hay más acciones, finalizando turno...")
+        eventos = self.servicio_juego.finalizar_turno()
         self._procesar_eventos(eventos)
         self._actualizar_highlights()
