@@ -519,8 +519,7 @@ class BattleRenderer:
         tx = self.board_offset_x + target_pos.columna * self.tile_size + self.tile_size // 2
         ty = self.board_offset_y + target_pos.fila * self.tile_size + self.tile_size // 2
 
-        # Zoom cinematográfico en combate
-        self.combat_zoom.start_combat((ax, ay), (tx, ty))
+        # NO hacer zoom en ataques normales (solo en muertes)
 
         # Efectos según tipo de atacante
         if attacker_type == TipoUnidad.SAGITTARII:
@@ -562,10 +561,10 @@ class BattleRenderer:
         # Efectos de impacto mejorados
         is_critical = damage > 30
         if is_critical:
-            # GOLPE CRÍTICO - Efectos épicos
-            self.combat_zoom.critical_hit()
+            # GOLPE CRÍTICO - Efectos épicos (sin zoom, solo efectos)
             ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
             self.camera.screen_flash((255, 0, 0), 100)
+            self.camera.shake_camera(8, 0.3)  # Shake moderado
 
             # Notificación épica
             self.notification_system.add_notification(
@@ -592,9 +591,12 @@ class BattleRenderer:
             self.weather_system.create_battle_atmosphere()
 
     def trigger_unit_death(self, unit_pos: Posicion, unit_type: TipoUnidad):
-        """Efectos cuando muere una unidad"""
+        """Efectos ÉPICOS cuando muere una unidad"""
         x = self.board_offset_x + unit_pos.columna * self.tile_size + self.tile_size // 2
         y = self.board_offset_y + unit_pos.fila * self.tile_size + self.tile_size // 2
+
+        # Zoom cinematográfico en la muerte
+        self.combat_zoom.unit_death((x, y))
 
         # Explosión de partículas rojas
         ParticleEffects.create_blood_explosion(self.particle_system, x, y)
@@ -602,8 +604,8 @@ class BattleRenderer:
         # Sonido de muerte
         self.sound_system.play_unit_sound(unit_type, "death")
 
-        # Screen shake proporcional
-        self.screen_shake = 8
+        # Camera shake (ya no usar screen_shake legacy)
+        self.camera.shake_camera(12, 0.5)
 
         # Efecto de impacto
         self.combat_effects.append({
