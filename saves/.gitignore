@@ -1,0 +1,6 @@
+# Ignorar archivos de guardado de campaña
+*.json
+campaign_progress.json
+
+# Permitir este archivo .gitignore
+!.gitignore

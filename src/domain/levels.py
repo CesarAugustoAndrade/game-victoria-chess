@@ -40,6 +40,12 @@ class CampaniaNiveles:
         self.niveles = self._crear_niveles()
         self.nivel_actual = 0
         self.niveles_completados = set()
+        self.estadisticas = {
+            "batallas_ganadas": 0,
+            "batallas_perdidas": 0,
+            "unidades_eliminadas": 0,
+            "tiempo_total_jugado": 0
+        }
 
     def obtener_nivel(self, numero: int) -> Optional[Nivel]:
         """Obtiene un nivel por su número"""
@@ -439,3 +445,51 @@ class CampaniaNiveles:
                 ConfiguracionUnidad(TipoUnidad.TRIARII, Posicion(0, 5)),
             ]
         )
+
+    def to_dict(self) -> dict:
+        """
+        Serializa la campaña a diccionario para guardado
+
+        Returns:
+            Diccionario con el estado de la campaña
+        """
+        return {
+            "nivel_actual": self.nivel_actual,
+            "niveles_completados": list(self.niveles_completados),
+            "progreso": self.progreso_campania,
+            "estadisticas": self.estadisticas.copy()
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'CampaniaNiveles':
+        """
+        Crea una campaña desde un diccionario guardado
+
+        Args:
+            data: Diccionario con datos de la campaña
+
+        Returns:
+            Instancia de CampaniaNiveles con el progreso cargado
+        """
+        campania = cls()
+        campania.nivel_actual = data.get("nivel_actual", 0)
+        campania.niveles_completados = set(data.get("niveles_completados", []))
+        campania.estadisticas = data.get("estadisticas", {
+            "batallas_ganadas": 0,
+            "batallas_perdidas": 0,
+            "unidades_eliminadas": 0,
+            "tiempo_total_jugado": 0
+        })
+        return campania
+
+    def registrar_victoria(self):
+        """Registra una victoria en las estadísticas"""
+        self.estadisticas["batallas_ganadas"] += 1
+
+    def registrar_derrota(self):
+        """Registra una derrota en las estadísticas"""
+        self.estadisticas["batallas_perdidas"] += 1
+
+    def registrar_unidad_eliminada(self):
+        """Registra una unidad eliminada en las estadísticas"""
+        self.estadisticas["unidades_eliminadas"] += 1

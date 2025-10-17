@@ -7,14 +7,30 @@ from src.core.state import State
 from src.ui.button import Button
 from src.utils.constants import WINDOW_WIDTH, WINDOW_HEIGHT
 from src.domain.levels import CampaniaNiveles
+from src.utils.save_manager import save_manager
 
 
 class NivelSelectorState(State):
     """Estado para seleccionar niveles de la campaña"""
 
-    def __init__(self, game, campania=None):
+    def __init__(self, game, campania=None, cargar_guardado=False):
         super().__init__(game)
-        self.campania = campania if campania else CampaniaNiveles()
+
+        # Cargar campaña: desde parámetro, desde guardado, o nueva
+        if campania:
+            self.campania = campania
+        elif cargar_guardado:
+            # Intentar cargar progreso guardado
+            save_data = save_manager.load_campaign()
+            if save_data:
+                self.campania = CampaniaNiveles.from_dict(save_data)
+                print(f"[SELECTOR] Campaña cargada - Progreso: {int(self.campania.progreso_campania * 100)}%")
+            else:
+                self.campania = CampaniaNiveles()
+                print("[SELECTOR] No se encontró guardado, iniciando campaña nueva")
+        else:
+            self.campania = CampaniaNiveles()
+
         self.buttons = []
         self.scroll_offset = 0
 

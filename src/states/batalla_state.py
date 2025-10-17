@@ -8,6 +8,7 @@ from src.application.servicio_juego import ServicioJuego
 from src.presentation.battle_renderer import BattleRenderer
 from src.domain.value_objects import TurnoActual, Bando
 from src.domain.events import *
+from src.utils.save_manager import save_manager
 
 
 class BatallaState(State):
@@ -238,7 +239,12 @@ class BatallaState(State):
                     if self.nivel and self.campania and not self.nivel_completado:
                         # Marcar nivel como completado
                         self.campania.niveles_completados.add(self.nivel.numero - 1)
+                        self.campania.registrar_victoria()
                         self.nivel_completado = True
+
+                        # GUARDAR PROGRESO AUTOMÁTICAMENTE
+                        self._guardar_progreso()
+
                         self._mostrar_mensaje(f"¡NIVEL {self.nivel.numero} COMPLETADO! Presiona ESC para continuar")
                     elif self.nivel:
                         self._mostrar_mensaje(f"¡NIVEL {self.nivel.numero} COMPLETADO! Presiona ESC para continuar")
@@ -247,6 +253,11 @@ class BatallaState(State):
                     # Trigger epic victory effects
                     self.renderer.trigger_victory_effects()
                 else:
+                    # Registrar derrota en estadísticas
+                    if self.campania:
+                        self.campania.registrar_derrota()
+                        self._guardar_progreso()
+
                     self._mostrar_mensaje("¡DERROTA! Presiona R para intentar de nuevo")
                     self.renderer.trigger_defeat_effects()
 
@@ -323,3 +334,12 @@ class BatallaState(State):
         else:
             self._mostrar_mensaje("📖 No hay más consejos. ¡Adelante soldado!")
             self.tutorial_index = 0  # Reiniciar
+
+    def _guardar_progreso(self):
+        """Guarda el progreso de la campaña automáticamente"""
+        if self.campania:
+            campaign_data = self.campania.to_dict()
+            if save_manager.save_campaign(campaign_data):
+                print(f"[BATALLA] Progreso guardado - Nivel {self.campania.nivel_actual + 1}")
+            else:
+                print("[BATALLA] ERROR: No se pudo guardar el progreso")

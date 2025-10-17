@@ -6,6 +6,7 @@ import pygame
 from src.core.state import State
 from src.ui.button import Button
 from src.utils.constants import WINDOW_WIDTH, WINDOW_HEIGHT
+from src.utils.save_manager import save_manager
 
 class MenuState(State):
     """Main menu state with buttons for game options"""
@@ -14,6 +15,7 @@ class MenuState(State):
         super().__init__(game)
         self.buttons = []
         self.title_font = pygame.font.Font(None, 72)
+        self.save_exists = save_manager.save_exists()
         self.setup_buttons()
 
     def setup_buttons(self):
@@ -21,15 +23,28 @@ class MenuState(State):
         button_width = 220
         button_height = 50
         button_x = WINDOW_WIDTH // 2 - button_width // 2
-        start_y = WINDOW_HEIGHT // 2 - 50
+        start_y = WINDOW_HEIGHT // 2 - 80
 
-        # Campaign button (selector de niveles)
+        # Botón Continuar Campaña (solo si existe guardado)
+        if self.save_exists:
+            self.buttons.append(
+                Button(
+                    button_x, start_y,
+                    button_width, button_height,
+                    "Continuar Campaña",
+                    self.continue_campaign
+                )
+            )
+            start_y += 70
+
+        # Nueva Campaña / Campaña (según si existe guardado)
+        campaign_text = "Nueva Campaña" if self.save_exists else "Campaña"
         self.buttons.append(
             Button(
                 button_x, start_y,
                 button_width, button_height,
-                "Campaña",
-                self.start_campaign
+                campaign_text,
+                self.new_campaign
             )
         )
 
@@ -63,9 +78,18 @@ class MenuState(State):
             )
         )
 
-    def start_campaign(self):
-        """Inicia la campaña (selector de niveles)"""
+    def continue_campaign(self):
+        """Continúa la campaña cargando el progreso guardado"""
         from src.states.nivel_selector_state import NivelSelectorState
+        self.game.change_state(NivelSelectorState(self.game, cargar_guardado=True))
+
+    def new_campaign(self):
+        """Inicia una nueva campaña (sobrescribe guardado si existe)"""
+        from src.states.nivel_selector_state import NivelSelectorState
+        # Si existe guardado, eliminarlo para empezar de cero
+        if self.save_exists:
+            save_manager.delete_save()
+            print("[MENU] Guardado anterior eliminado - Iniciando nueva campaña")
         self.game.change_state(NivelSelectorState(self.game))
 
     def start_quick_battle(self):
