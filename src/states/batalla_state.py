@@ -458,8 +458,7 @@ class BatallaState(State):
                         eventos.append(EventoUnidadMovida(
                             unidad.id,
                             posicion_origen,
-                            mejor_movimiento,
-                            unidad.tipo.value
+                            mejor_movimiento
                         ))
 
                         # Procesar y salir (solo una acción)
