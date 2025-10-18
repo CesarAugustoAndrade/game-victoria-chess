@@ -8,7 +8,8 @@ import random
 from src.domain.entities import Ejercito, Tablero
 from src.domain.events import (
     EventoDominio, EventoAccionIA, EventoUnidadMovida,
-    EventoAtaqueRealizado, EventoUnidadEliminada
+    EventoAtaqueRealizado, EventoUnidadEliminada, EventoCriticoRealizado,
+    EventoKillRegistrado, EventoCamaraLenta
 )
 from src.domain.services import (
     CalculadorCombate, CalculadorPrioridad, CalculadorMovimiento,
@@ -30,6 +31,68 @@ class EstrategiaIA(ABC):
     ) -> List[EventoDominio]:
         """Ejecuta el turno de la IA y retorna eventos generados"""
         pass
+
+    @staticmethod
+    def _ejecutar_ataque_con_efectos(atacante, objetivo, grito_guerra: str = None) -> List[EventoDominio]:
+        """
+        Ejecuta un ataque y genera todos los eventos épicos relacionados
+        Retorna lista de eventos
+        """
+        eventos = []
+
+        # Ejecutar ataque (con sistema de críticos)
+        resultado, es_critico, multiplicador = CalculadorCombate.ejecutar_ataque(
+            atacante, objetivo
+        )
+
+        # Evento de ataque base
+        eventos.append(EventoAtaqueRealizado(
+            resultado,
+            grito_guerra=grito_guerra or atacante.visualizacion.grito_guerra
+        ))
+
+        # Si fue crítico, eventos épicos
+        if es_critico:
+            mensaje_critico = "¡GOLPE CRÍTICO!" if multiplicador == 2.0 else "¡¡¡CRÍTICO DEVASTADOR!!!"
+            eventos.append(EventoCriticoRealizado(
+                atacante_id=atacante.id,
+                defensor_id=objetivo.id,
+                danio_total=resultado.danio_infligido,
+                multiplicador=multiplicador,
+                posicion=objetivo.posicion,
+                mensaje=mensaje_critico
+            ))
+
+            # Cámara lenta para críticos
+            duracion = 800 if multiplicador == 2.0 else 1200
+            eventos.append(EventoCamaraLenta(
+                duracion_ms=duracion,
+                motivo="critico",
+                intensidad=0.3 if multiplicador == 2.0 else 0.2
+            ))
+
+        # Si eliminó al objetivo
+        if resultado.objetivo_eliminado:
+            # Registrar kill
+            eventos.append(EventoKillRegistrado(
+                asesino_id=atacante.id,
+                victima_id=objetivo.id,
+                asesino_tipo=atacante.tipo.value,
+                victima_tipo=objetivo.tipo.value,
+                asesino_bando=atacante.bando,
+                victima_bando=objetivo.bando,
+                fue_critico=es_critico,
+                posicion=objetivo.posicion
+            ))
+
+            eventos.append(EventoUnidadEliminada(
+                objetivo.id,
+                objetivo.bando,
+                objetivo.tipo.value,
+                f"¡{objetivo.visualizacion.nombre} ha caído!"
+            ))
+
+        return eventos
 
 
 class IAAgresiva(EstrategiaIA):
@@ -69,21 +132,11 @@ class IAAgresiva(EstrategiaIA):
                         "atacar"
                     ))
 
-                    resultado = CalculadorCombate.ejecutar_ataque(
-                        unidad, mejor_objetivo
+                    # Usar helper con efectos épicos
+                    eventos_ataque = self._ejecutar_ataque_con_efectos(
+                        unidad, mejor_objetivo, unidad.visualizacion.grito_guerra
                     )
-                    eventos.append(EventoAtaqueRealizado(
-                        resultado,
-                        grito_guerra=unidad.visualizacion.grito_guerra
-                    ))
-
-                    if resultado.objetivo_eliminado:
-                        eventos.append(EventoUnidadEliminada(
-                            mejor_objetivo.id,
-                            mejor_objetivo.bando,
-                            mejor_objetivo.tipo.value,
-                            "¡Enemigo eliminado!"
-                        ))
+                    eventos.extend(eventos_ataque)
 
             # Prioridad 2: Moverse hacia enemigos si no puede atacar
             # NOTA: Cambiado de elif a if para permitir moverse Y luego atacar
@@ -126,21 +179,11 @@ class IAAgresiva(EstrategiaIA):
                                     "atacar"
                                 ))
 
-                                resultado = CalculadorCombate.ejecutar_ataque(
-                                    unidad, mejor_objetivo
+                                # Usar helper con efectos épicos
+                                eventos_ataque = self._ejecutar_ataque_con_efectos(
+                                    unidad, mejor_objetivo, unidad.visualizacion.grito_guerra
                                 )
-                                eventos.append(EventoAtaqueRealizado(
-                                    resultado,
-                                    grito_guerra=unidad.visualizacion.grito_guerra
-                                ))
-
-                                if resultado.objetivo_eliminado:
-                                    eventos.append(EventoUnidadEliminada(
-                                        mejor_objetivo.id,
-                                        mejor_objetivo.bando,
-                                        mejor_objetivo.tipo.value,
-                                        "¡Enemigo eliminado!"
-                                    ))
+                                eventos.extend(eventos_ataque)
 
         return eventos
 
@@ -227,19 +270,11 @@ class IADefensiva(EstrategiaIA):
                         "atacar"
                     ))
 
-                    resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                    eventos.append(EventoAtaqueRealizado(
-                        resultado,
-                        grito_guerra=f"¡Por Roma y la supervivencia!"
-                    ))
-
-                    if resultado.objetivo_eliminado:
-                        eventos.append(EventoUnidadEliminada(
-                            objetivo.id,
-                            objetivo.bando,
-                            objetivo.tipo.value,
-                            "¡Amenaza neutralizada!"
-                        ))
+                    # Usar helper con efectos épicos
+                    eventos_ataque = self._ejecutar_ataque_con_efectos(
+                        unidad, objetivo, "¡Por Roma y la supervivencia!"
+                    )
+                    eventos.extend(eventos_ataque)
 
             # Si no atacó, mantener posición defensiva
             elif unidad.puede_moverse:
@@ -506,19 +541,16 @@ class IATactica(EstrategiaIA):
                                 "atacar"
                             ))
 
-                            resultado = CalculadorCombate.ejecutar_ataque(atacante, objetivo)
-                            eventos.append(EventoAtaqueRealizado(
-                                resultado,
-                                grito_guerra="¡Concentren fuego!"
-                            ))
+                            # Usar helper con efectos épicos
+                            eventos_ataque = self._ejecutar_ataque_con_efectos(
+                                atacante, objetivo, "¡Concentren fuego!"
+                            )
+                            eventos.extend(eventos_ataque)
 
                             self._unidades_procesadas.add(atacante.id)
 
-                            if resultado.objetivo_eliminado:
-                                eventos.append(EventoUnidadEliminada(
-                                    objetivo.id, objetivo.bando, objetivo.tipo.value,
-                                    "¡Objetivo prioritario eliminado!"
-                                ))
+                            # Verificar si objetivo fue eliminado
+                            if not objetivo.esta_viva:
                                 break  # No seguir atacando si ya está muerto
 
                         # Si no está en rango, intentar acercarse
@@ -539,11 +571,10 @@ class IATactica(EstrategiaIA):
 
                                 # Intentar atacar después de mover
                                 if atacante.puede_actuar and objetivo in atacante.obtener_objetivos_atacables([objetivo]):
-                                    resultado = CalculadorCombate.ejecutar_ataque(atacante, objetivo)
-                                    eventos.append(EventoAtaqueRealizado(
-                                        resultado,
-                                        grito_guerra="¡Al ataque coordinado!"
-                                    ))
+                                    eventos_ataque = self._ejecutar_ataque_con_efectos(
+                                        atacante, objetivo, "¡Al ataque coordinado!"
+                                    )
+                                    eventos.extend(eventos_ataque)
                                     self._unidades_procesadas.add(atacante.id)
 
                 # Actualizar lista de atacantes disponibles
@@ -589,17 +620,11 @@ class IATactica(EstrategiaIA):
                         arqueros = [o for o in objetivos if o.tipo == TipoUnidad.SAGITTARII]
                         objetivo = arqueros[0] if arqueros else objetivos[0]
 
-                        resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                        eventos.append(EventoAtaqueRealizado(
-                            resultado,
-                            grito_guerra="¡Por el flanco!"
-                        ))
-
-                        if resultado.objetivo_eliminado:
-                            eventos.append(EventoUnidadEliminada(
-                                objetivo.id, objetivo.bando, objetivo.tipo.value,
-                                "¡Flanqueo exitoso!"
-                            ))
+                        # Usar helper con efectos épicos
+                        eventos_ataque = self._ejecutar_ataque_con_efectos(
+                            unidad, objetivo, "¡Por el flanco!"
+                        )
+                        eventos.extend(eventos_ataque)
 
                 self._unidades_procesadas.add(unidad.id)
 
@@ -623,17 +648,11 @@ class IATactica(EstrategiaIA):
                         unidad, objetivos
                     )
                     if objetivo:
-                        resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                        eventos.append(EventoAtaqueRealizado(
-                            resultado,
-                            grito_guerra="¡Mantened la línea!"
-                        ))
-
-                        if resultado.objetivo_eliminado:
-                            eventos.append(EventoUnidadEliminada(
-                                objetivo.id, objetivo.bando, objetivo.tipo.value,
-                                "¡Línea frontal victoriosa!"
-                            ))
+                        # Usar helper con efectos épicos
+                        eventos_ataque = self._ejecutar_ataque_con_efectos(
+                            unidad, objetivo, "¡Mantened la línea!"
+                        )
+                        eventos.extend(eventos_ataque)
                         self._unidades_procesadas.add(unidad.id)
                         continue
 
@@ -661,8 +680,9 @@ class IATactica(EstrategiaIA):
                         )
                         if objetivos:
                             objetivo = objetivos[0]
-                            resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                            eventos.append(EventoAtaqueRealizado(resultado))
+                            # Usar helper con efectos épicos
+                            eventos_ataque = self._ejecutar_ataque_con_efectos(unidad, objetivo)
+                            eventos.extend(eventos_ataque)
 
                 self._unidades_procesadas.add(unidad.id)
 
@@ -687,17 +707,11 @@ class IATactica(EstrategiaIA):
                         100 if o.tipo == TipoUnidad.SAGITTARII else 0
                     ) - o.vida_actual)
 
-                    resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                    eventos.append(EventoAtaqueRealizado(
-                        resultado,
-                        grito_guerra="¡Lluvia de proyectiles!"
-                    ))
-
-                    if resultado.objetivo_eliminado:
-                        eventos.append(EventoUnidadEliminada(
-                            objetivo.id, objetivo.bando, objetivo.tipo.value,
-                            "¡Apoyo efectivo!"
-                        ))
+                    # Usar helper con efectos épicos
+                    eventos_ataque = self._ejecutar_ataque_con_efectos(
+                        unidad, objetivo, "¡Lluvia de proyectiles!"
+                    )
+                    eventos.extend(eventos_ataque)
                     self._unidades_procesadas.add(unidad.id)
                     continue
 
@@ -740,14 +754,9 @@ class IATactica(EstrategiaIA):
                         unidad, objetivos
                     )
                     if objetivo:
-                        resultado = CalculadorCombate.ejecutar_ataque(unidad, objetivo)
-                        eventos.append(EventoAtaqueRealizado(resultado))
-
-                        if resultado.objetivo_eliminado:
-                            eventos.append(EventoUnidadEliminada(
-                                objetivo.id, objetivo.bando, objetivo.tipo.value,
-                                "¡Victoria táctica!"
-                            ))
+                        # Usar helper con efectos épicos
+                        eventos_ataque = self._ejecutar_ataque_con_efectos(unidad, objetivo)
+                        eventos.extend(eventos_ataque)
 
             elif unidad.puede_moverse:
                 movimientos = unidad.obtener_posiciones_movimiento_validas(tablero)

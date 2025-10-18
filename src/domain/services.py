@@ -13,6 +13,14 @@ from src.domain.value_objects import (
 class CalculadorCombate:
     """Servicio de dominio para cálculos de combate"""
 
+    # Configuración de golpes críticos
+    PROBABILIDAD_CRITICO = 0.15  # 15% de probabilidad
+    MULTIPLICADOR_CRITICO = 2.0  # x2 daño
+
+    # Configuración de críticos DEVASTADORES (muy raros)
+    PROBABILIDAD_CRITICO_DEVASTADOR = 0.03  # 3% adicional si ya es crítico
+    MULTIPLICADOR_CRITICO_DEVASTADOR = 3.0  # x3 daño
+
     @staticmethod
     def calcular_danio(atacante: Unidad, defensor: Unidad) -> int:
         """Calcula el daño de un ataque con varianza aleatoria"""
@@ -20,24 +28,56 @@ class CalculadorCombate:
         return atacante.calcular_danio_contra(defensor, varianza)
 
     @staticmethod
-    def ejecutar_ataque(atacante: Unidad, defensor: Unidad) -> ResultadoAtaque:
-        """Ejecuta un ataque y retorna el resultado"""
-        danio = CalculadorCombate.calcular_danio(atacante, defensor)
+    def verificar_critico() -> tuple[bool, float]:
+        """
+        Verifica si el ataque es crítico y retorna el multiplicador
+        Retorna: (es_critico, multiplicador)
+        """
+        roll = random.random()
+
+        # Crítico DEVASTADOR (muy raro pero épico)
+        if roll < (CalculadorCombate.PROBABILIDAD_CRITICO * CalculadorCombate.PROBABILIDAD_CRITICO_DEVASTADOR):
+            return (True, CalculadorCombate.MULTIPLICADOR_CRITICO_DEVASTADOR)
+
+        # Crítico normal
+        if roll < CalculadorCombate.PROBABILIDAD_CRITICO:
+            return (True, CalculadorCombate.MULTIPLICADOR_CRITICO)
+
+        return (False, 1.0)
+
+    @staticmethod
+    def ejecutar_ataque(atacante: Unidad, defensor: Unidad) -> tuple[ResultadoAtaque, bool, float]:
+        """
+        Ejecuta un ataque y retorna el resultado
+        Retorna: (resultado_ataque, fue_critico, multiplicador_critico)
+        """
+        # Calcular daño base
+        danio_base = CalculadorCombate.calcular_danio(atacante, defensor)
+
+        # Verificar crítico
+        es_critico, multiplicador = CalculadorCombate.verificar_critico()
+
+        # Aplicar multiplicador crítico
+        danio_final = int(danio_base * multiplicador) if es_critico else danio_base
 
         vida_antes = defensor.vida_actual
-        defensor.recibir_danio(danio)
+        defensor.recibir_danio(danio_final)
         atacante.marcar_como_actuada()
 
-        # Calcular pérdida de moral
-        moral_perdida = min(15, danio)  # Más daño = más pérdida de moral
+        # Calcular pérdida de moral (más si es crítico)
+        moral_perdida = min(15, danio_final)
+        if es_critico:
+            moral_perdida = min(30, int(moral_perdida * 1.5))  # Críticos causan pánico
 
-        return ResultadoAtaque(
+        resultado = ResultadoAtaque(
             atacante_id=atacante.id,
             defensor_id=defensor.id,
-            danio_infligido=danio,
+            danio_infligido=danio_final,
             objetivo_eliminado=not defensor.esta_viva,
             moral_perdida=moral_perdida
         )
+
+        return resultado, es_critico, multiplicador
 
     @staticmethod
     def calcular_bonificacion_formacion(atacante: Unidad, formacion: str) -> int:

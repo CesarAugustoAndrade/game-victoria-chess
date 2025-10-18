@@ -169,8 +169,8 @@ class Batalla:
         if objetivo not in objetivos_validos:
             raise ExcepcionAtaqueInvalido("Objetivo fuera de rango")
 
-        # Ejecutar ataque
-        resultado = CalculadorCombate.ejecutar_ataque(
+        # Ejecutar ataque (ahora retorna info de crítico)
+        resultado, es_critico, multiplicador = CalculadorCombate.ejecutar_ataque(
             self._unidad_seleccionada,
             objetivo
         )
@@ -181,7 +181,39 @@ class Batalla:
             EventoAtaqueRealizado(resultado, grito)
         )
 
+        # Si fue crítico, emitir evento épico
+        if es_critico:
+            mensaje_critico = "¡GOLPE CRÍTICO!" if multiplicador == 2.0 else "¡¡¡CRÍTICO DEVASTADOR!!!"
+            self._eventos_pendientes.append(EventoCriticoRealizado(
+                atacante_id=self._unidad_seleccionada.id,
+                defensor_id=objetivo.id,
+                danio_total=resultado.danio_infligido,
+                multiplicador=multiplicador,
+                posicion=objetivo.posicion,
+                mensaje=mensaje_critico
+            ))
+
+            # Activar cámara lenta para críticos
+            duracion = 800 if multiplicador == 2.0 else 1200  # Más lento para devastadores
+            self._eventos_pendientes.append(EventoCamaraLenta(
+                duracion_ms=duracion,
+                motivo="critico",
+                intensidad=0.3 if multiplicador == 2.0 else 0.2  # Más lento para devastadores
+            ))
+
         if resultado.objetivo_eliminado:
+            # Registrar kill para el feed
+            self._eventos_pendientes.append(EventoKillRegistrado(
+                asesino_id=self._unidad_seleccionada.id,
+                victima_id=objetivo.id,
+                asesino_tipo=self._unidad_seleccionada.tipo.value,
+                victima_tipo=objetivo.tipo.value,
+                asesino_bando=self._unidad_seleccionada.bando,
+                victima_bando=objetivo.bando,
+                fue_critico=es_critico,
+                posicion=objetivo.posicion
+            ))
+
             self._eventos_pendientes.append(EventoUnidadEliminada(
                 objetivo.id,
                 objetivo.bando,
@@ -189,6 +221,14 @@ class Batalla:
                 f"¡{objetivo.visualizacion.nombre} ha caído!"
             ))
             self._ejercito_enemigo.remover_unidades_muertas()
+
+            # Cámara lenta para última unidad enemiga
+            if len(self._ejercito_enemigo.unidades_vivas) == 0:
+                self._eventos_pendientes.append(EventoCamaraLenta(
+                    duracion_ms=1500,
+                    motivo="ultima_unidad",
+                    intensidad=0.25
+                ))
 
         # Verificar pánico
         if objetivo.esta_viva and objetivo.esta_en_panico:

@@ -97,3 +97,35 @@ class EventoAccionIA(EventoDominio):
     """Evento cuando la IA realiza una acción"""
     descripcion: str
     tipo_accion: str  # "mover" o "atacar"
+
+
+@dataclass
+class EventoCriticoRealizado(EventoDominio):
+    """Evento cuando se realiza un golpe crítico ÉPICO"""
+    atacante_id: str
+    defensor_id: str
+    danio_total: int
+    multiplicador: float
+    posicion: Posicion
+    mensaje: str = "¡GOLPE CRÍTICO!"
+
+
+@dataclass
+class EventoKillRegistrado(EventoDominio):
+    """Evento cuando una unidad elimina a otra (para Kill Feed)"""
+    asesino_id: str
+    victima_id: str
+    asesino_tipo: str
+    victima_tipo: str
+    asesino_bando: Bando
+    victima_bando: Bando
+    fue_critico: bool
+    posicion: Posicion
+
+
+@dataclass
+class EventoCamaraLenta(EventoDominio):
+    """Evento que solicita activar cámara lenta para momento épico"""
+    duracion_ms: int  # Duración en milisegundos
+    motivo: str  # "critico", "kill", "ultima_unidad", etc.
+    intensidad: float = 0.3  # 0.3 = 30% velocidad normal
