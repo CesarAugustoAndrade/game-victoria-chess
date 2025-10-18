@@ -6,6 +6,7 @@ import pygame
 from src.core.state import State
 from src.application.servicio_juego import ServicioJuego
 from src.presentation.battle_renderer import BattleRenderer
+from src.presentation.kill_feed import KillFeed, KillNotification
 from src.domain.value_objects import TurnoActual, Bando
 from src.domain.events import *
 from src.utils.save_manager import save_manager
@@ -30,6 +31,13 @@ class BatallaState(State):
         self.auto_play_enabled = False  # Modo auto-play desactivado por defecto
         self.auto_play_timer = 0  # Timer para retraso entre acciones
         self.auto_play_delay = 0.5  # Segundos entre acciones de IA
+
+        # ===== SISTEMAS ÉPICOS YOLO =====
+        self.kill_feed = KillFeed(game.screen.get_width(), game.screen.get_height())
+        self.kill_notification = KillNotification(game.screen.get_width(), game.screen.get_height())
+        self.slow_motion_active = False
+        self.slow_motion_time_remaining = 0
+        self.slow_motion_intensity = 1.0  # 1.0 = normal, 0.3 = 30% velocidad
 
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
@@ -294,6 +302,51 @@ class BatallaState(State):
                 import random
                 self.renderer.screen_shake = 3
 
+            # ===== NUEVOS EVENTOS ÉPICOS =====
+            elif isinstance(evento, EventoCriticoRealizado):
+                # Notificación grande para críticos
+                if evento.multiplicador >= 3.0:
+                    self.kill_notification.mostrar("¡¡¡CRÍTICO DEVASTADOR!!!", es_devastador=True)
+                    self._mostrar_mensaje(f"¡¡¡x{evento.multiplicador} DAÑO!!! ({evento.danio_total} HP)")
+                else:
+                    self.kill_notification.mostrar("¡GOLPE CRÍTICO!", es_devastador=False)
+                    self._mostrar_mensaje(f"¡CRÍTICO! x{evento.multiplicador} daño ({evento.danio_total} HP)")
+
+                # Efectos visuales épicos para críticos
+                self.renderer.trigger_critical_hit_effect(evento.posicion, evento.multiplicador)
+
+            elif isinstance(evento, EventoKillRegistrado):
+                # Agregar al kill feed
+                # Buscar nombres de unidades
+                asesino = None
+                victima = None
+
+                for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
+                    if unidad.id == evento.asesino_id:
+                        asesino = unidad
+                    # Buscar también en muertas para la víctima
+                for ejercito in [batalla.ejercito_jugador, batalla.ejercito_enemigo]:
+                    for unidad in ejercito._unidades:
+                        if unidad.id == evento.victima_id:
+                            victima = unidad
+                            break
+
+                if asesino and victima:
+                    self.kill_feed.agregar_kill(
+                        asesino_nombre=asesino.visualizacion.nombre,
+                        victima_nombre=victima.visualizacion.nombre,
+                        asesino_bando=evento.asesino_bando,
+                        victima_bando=evento.victima_bando,
+                        fue_critico=evento.fue_critico
+                    )
+
+            elif isinstance(evento, EventoCamaraLenta):
+                # Activar cámara lenta
+                self.slow_motion_active = True
+                self.slow_motion_time_remaining = evento.duracion_ms
+                self.slow_motion_intensity = evento.intensidad
+                print(f"[SLOW-MO] Activada por {evento.duracion_ms}ms a {evento.intensidad*100}% velocidad")
+
     def _actualizar_highlights(self):
         """Actualiza las casillas resaltadas"""
         batalla = self.servicio_juego.obtener_batalla_actual()
@@ -311,6 +364,22 @@ class BatallaState(State):
 
     def update(self, dt):
         """Actualiza el estado"""
+        # Aplicar slow motion si está activo
+        dt_modificado = dt
+        if self.slow_motion_active:
+            # Reducir dt según intensidad (0.3 = 30% velocidad)
+            dt_modificado = dt * self.slow_motion_intensity
+            self.slow_motion_time_remaining -= dt * 1000  # dt está en segundos, convertir a ms
+
+            if self.slow_motion_time_remaining <= 0:
+                self.slow_motion_active = False
+                self.slow_motion_intensity = 1.0
+                print("[SLOW-MO] Desactivada")
+
+        # Actualizar sistemas épicos con dt modificado
+        self.kill_feed.update(int(dt_modificado * 1000))  # Convertir a milisegundos
+        self.kill_notification.update(int(dt_modificado * 1000))
+
         # Limpiar mensaje si ha pasado el tiempo
         if self.tiempo_mensaje > 0 and pygame.time.get_ticks() > self.tiempo_mensaje:
             self.mensaje_actual = ""
@@ -322,7 +391,7 @@ class BatallaState(State):
 
             # Solo ejecutar auto-play en turno del jugador y si la batalla no ha terminado
             if batalla and batalla.turno_actual == TurnoActual.JUGADOR and not batalla.batalla_terminada:
-                self.auto_play_timer += dt
+                self.auto_play_timer += dt_modificado  # Usar dt modificado por slow-mo
 
                 # Ejecutar acción de IA cuando pase el delay
                 if self.auto_play_timer >= self.auto_play_delay:
@@ -334,9 +403,17 @@ class BatallaState(State):
         batalla = self.servicio_juego.obtener_batalla_actual()
         self.renderer.render(screen, batalla)
 
+        # Renderizar sistemas épicos
+        self.kill_feed.render(screen)
+        self.kill_notification.render(screen)
+
         # Renderizar mensaje si hay uno
         if self.mensaje_actual:
             self._render_mensaje(screen)
+
+        # Indicador visual de slow motion
+        if self.slow_motion_active:
+            self._render_slow_motion_indicator(screen)
 
     def _render_mensaje(self, screen):
         """Renderiza un mensaje en pantalla"""
@@ -370,6 +447,34 @@ class BatallaState(State):
         else:
             self._mostrar_mensaje("📖 No hay más consejos. ¡Adelante soldado!")
             self.tutorial_index = 0  # Reiniciar
+
+    def _render_slow_motion_indicator(self, screen):
+        """Renderiza indicador visual de slow motion"""
+        # Efecto de viñeta oscura en los bordes
+        overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
+
+        # Viñeta radial desde el centro
+        center_x = screen.get_width() // 2
+        center_y = screen.get_height() // 2
+        max_radius = max(screen.get_width(), screen.get_height())
+
+        for radius in range(max_radius // 2, max_radius, 50):
+            alpha = int(30 * (radius / max_radius))
+            pygame.draw.circle(overlay, (0, 0, 0, alpha), (center_x, center_y), radius, 50)
+
+        screen.blit(overlay, (0, 0))
+
+        # Texto "SLOW MOTION"
+        font = pygame.font.Font(None, 24)
+        text = font.render(f"SLOW MOTION {int(self.slow_motion_intensity*100)}%", True, (255, 215, 0))
+        text_rect = text.get_rect(center=(screen.get_width() // 2, 20))
+
+        # Fondo para el texto
+        bg_rect = text_rect.inflate(20, 10)
+        pygame.draw.rect(screen, (0, 0, 0, 150), bg_rect)
+        pygame.draw.rect(screen, (255, 215, 0), bg_rect, 2)
+
+        screen.blit(text, text_rect)
 
     def _guardar_progreso(self):
         """Guarda el progreso de la campaña automáticamente"""
@@ -421,19 +526,12 @@ class BatallaState(State):
                     if mejor_objetivo:
                         print(f"[AUTO-PLAY] {unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}")
 
-                        resultado = CalculadorCombate.ejecutar_ataque(unidad, mejor_objetivo)
-                        eventos.append(EventoAtaqueRealizado(
-                            resultado,
-                            grito_guerra=unidad.visualizacion.grito_guerra
-                        ))
-
-                        if resultado.objetivo_eliminado:
-                            eventos.append(EventoUnidadEliminada(
-                                mejor_objetivo.id,
-                                mejor_objetivo.bando,
-                                mejor_objetivo.tipo.value,
-                                "¡Enemigo eliminado!"
-                            ))
+                        # Usar sistema de críticos
+                        from src.domain.strategies import EstrategiaIA
+                        eventos_ataque = EstrategiaIA._ejecutar_ataque_con_efectos(
+                            unidad, mejor_objetivo, unidad.visualizacion.grito_guerra
+                        )
+                        eventos.extend(eventos_ataque)
 
                         # Procesar y salir (solo una acción)
                         self._procesar_eventos(eventos)

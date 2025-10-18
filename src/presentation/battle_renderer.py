@@ -591,6 +591,43 @@ class BattleRenderer:
         if self.battle_intensity > 50:
             self.weather_system.create_battle_atmosphere()
 
+    def trigger_critical_hit_effect(self, target_pos: Posicion, multiplicador: float):
+        """Efectos visuales EXTREMOS para golpes críticos"""
+        tx = self.board_offset_x + target_pos.columna * self.tile_size + self.tile_size // 2
+        ty = self.board_offset_y + target_pos.fila * self.tile_size + self.tile_size // 2
+
+        # Diferente intensidad según multiplicador
+        if multiplicador >= 3.0:
+            # DEVASTADOR x3 - Efectos MAXIMOS
+            ParticleEffects.create_fire_effect(self.particle_system, tx, ty)
+            ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
+            self.camera.screen_flash((255, 215, 0), 200)  # Flash dorado más largo
+            self.camera.shake_camera(20, 0.8, 80)  # Shake muy fuerte
+            self.camera.set_zoom(1.3, instant=False)  # Zoom in dramático
+
+            # Onda de choque
+            for i in range(5):
+                ParticleEffects.create_spark_burst(self.particle_system, tx + random.randint(-30, 30), ty + random.randint(-30, 30))
+
+        else:
+            # CRITICO x2 - Efectos épicos
+            ParticleEffects.create_spark_burst(self.particle_system, tx, ty)
+            ParticleEffects.create_blood_explosion(self.particle_system, tx, ty)
+            self.camera.screen_flash((255, 50, 50), 150)  # Flash rojo
+            self.camera.shake_camera(15, 0.5, 60)  # Shake fuerte
+
+        # Efecto de impacto dorado para críticos
+        self.combat_effects.append({
+            'type': 'impact',
+            'position': (tx, ty),
+            'color': (255, 215, 0) if multiplicador >= 3.0 else (255, 100, 100),
+            'duration': 0.8 if multiplicador >= 3.0 else 0.5,
+            'max_duration': 0.8 if multiplicador >= 3.0 else 0.5
+        })
+
+        # Aumentar mucho la intensidad de batalla
+        self.battle_intensity = min(100, self.battle_intensity + 30)
+
     def trigger_unit_death(self, unit_pos: Posicion, unit_type: TipoUnidad):
         """Efectos ÉPICOS cuando muere una unidad"""
         x = self.board_offset_x + unit_pos.columna * self.tile_size + self.tile_size // 2
