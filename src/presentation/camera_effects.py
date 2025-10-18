@@ -492,3 +492,6 @@ class CombatZoomController:
         # Añadir efecto de sangre temporal
         self.camera.add_effect(ScreenEffect.BLOOD_OVERLAY)
         pygame.time.set_timer(pygame.USEREVENT + 2, 2000)  # Remover después de 2 segundos
+
+        # ARREGLO: Resetear zoom automáticamente después de 1.5 segundos
+        pygame.time.set_timer(pygame.USEREVENT + 3, 1500)

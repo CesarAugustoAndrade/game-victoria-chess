@@ -56,6 +56,19 @@ class BatallaState(State):
         if not batalla:
             return
 
+        # Manejar eventos de timer de cámara
+        if event.type == pygame.USEREVENT + 1:
+            # Reset slow motion
+            self.renderer.camera.target_time_scale = 1.0
+        elif event.type == pygame.USEREVENT + 2:
+            # Remover efecto de sangre
+            from src.presentation.camera_effects import ScreenEffect
+            self.renderer.camera.remove_effect(ScreenEffect.BLOOD_OVERLAY)
+        elif event.type == pygame.USEREVENT + 3:
+            # ARREGLO: Resetear zoom después de muerte de unidad
+            from src.presentation.camera_effects import ZoomMode
+            self.renderer.camera.set_zoom(ZoomMode.NORMAL.value)
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 # Volver al selector de niveles si es campaña, o al menú si no
@@ -434,6 +447,18 @@ class BatallaState(State):
                                 mejor_objetivo.tipo.value,
                                 "¡Enemigo eliminado!"
                             ))
+
+                        # ARREGLO: Verificar si el enemigo fue completamente derrotado
+                        if batalla.ejercito_enemigo.esta_derrotado:
+                            from src.domain.events import EventoBatallaTerminada
+                            mensaje = "¡VICTORIA! ¡Roma es eterna!"
+                            eventos.append(EventoBatallaTerminada(
+                                Bando.ROMA,
+                                len(batalla.ejercito_jugador.unidades_vivas),
+                                mensaje
+                            ))
+                            batalla._batalla_terminada = True
+                            batalla._ganador = Bando.ROMA
 
                         # Procesar y salir (solo una acción)
                         self._procesar_eventos(eventos)
