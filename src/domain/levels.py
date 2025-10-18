@@ -454,6 +454,7 @@ class CampaniaNiveles:
             Diccionario con el estado de la campaña
         """
         return {
+            "tipo_campania": "tutorial",  # Identificador de campaña tutorial
             "nivel_actual": self.nivel_actual,
             "niveles_completados": list(self.niveles_completados),
             "progreso": self.progreso_campania,

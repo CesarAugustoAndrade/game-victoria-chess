@@ -48,15 +48,37 @@ class ServicioJuego:
         from src.domain.factories import FabricaEjercito
         from src.domain.entities import Tablero
         from src.domain.strategies import IAAgresiva
-        from src.domain.value_objects import Bando
+        from src.domain.value_objects import Bando, TipoUnidad
 
-        # Crear ejércitos desde las configuraciones del nivel
+        # Crear ejército del jugador
         ejercito_jugador = FabricaEjercito.crear_ejercito_desde_nivel(
             Bando.ROMA,
             nivel.unidades_jugador
         )
+
+        # Detectar el bando enemigo según el tipo de unidades
+        # Si hay unidades galas, usar Bando.GALIA, sino usar Bando.BARBAROS
+        unidades_galas = {
+            TipoUnidad.GUERRERO_TRIBAL,
+            TipoUnidad.ESPADAS_ELEGIDAS,
+            TipoUnidad.FANATICOS_DESNUDOS,
+            TipoUnidad.ESCARAMUZADORES,
+            TipoUnidad.CABALLERIA_BARBARA,
+            TipoUnidad.CABALLERIA_NOBLE,
+            TipoUnidad.CARROS_GUERRA
+        }
+
+        # Verificar si hay al menos una unidad gala en el nivel
+        tiene_unidades_galas = any(
+            config.tipo in unidades_galas
+            for config in nivel.unidades_enemigo
+        )
+
+        bando_enemigo = Bando.GALIA if tiene_unidades_galas else Bando.BARBAROS
+
+        # Crear ejército enemigo con el bando correcto
         ejercito_enemigo = FabricaEjercito.crear_ejercito_desde_nivel(
-            Bando.BARBAROS,
+            bando_enemigo,
             nivel.unidades_enemigo
         )
 

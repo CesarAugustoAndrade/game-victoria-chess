@@ -23,6 +23,8 @@ class UnitSpriteRenderer:
 
             if bando == Bando.ROMA:
                 self._draw_roman_unit(surface, tipo, size)
+            elif bando == Bando.GALIA:
+                self._draw_gallic_unit(surface, tipo, size)
             else:
                 self._draw_barbarian_unit(surface, tipo, size)
 
@@ -554,3 +556,482 @@ class UnitSpriteRenderer:
             ]
             pygame.draw.polygon(surface, (180, 0, 0), cape_points)
             pygame.draw.polygon(surface, secondary, cape_points, 1)
+
+    def _draw_gallic_unit(self, surface: pygame.Surface, tipo: TipoUnidad, size: int):
+        """Dibuja unidades galas con estilo celta distintivo"""
+        center = size // 2
+
+        if tipo == TipoUnidad.GUERRERO_TRIBAL:
+            self._draw_guerrero_tribal(surface, center, size)
+        elif tipo == TipoUnidad.ESPADAS_ELEGIDAS:
+            self._draw_espadas_elegidas(surface, center, size)
+        elif tipo == TipoUnidad.FANATICOS_DESNUDOS:
+            self._draw_fanaticos_desnudos(surface, center, size)
+        elif tipo == TipoUnidad.ESCARAMUZADORES:
+            self._draw_escaramuzadores(surface, center, size)
+        elif tipo == TipoUnidad.CABALLERIA_BARBARA:
+            self._draw_caballeria_barbara(surface, center, size)
+        elif tipo == TipoUnidad.CABALLERIA_NOBLE:
+            self._draw_caballeria_noble(surface, center, size)
+        elif tipo == TipoUnidad.CARROS_GUERRA:
+            self._draw_carros_guerra(surface, center, size)
+
+    def _draw_guerrero_tribal(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Guerrero Tribal galo"""
+        verde_bosque = (70, 120, 70)
+        marron_cuero = (139, 90, 43)
+        piel = (200, 150, 100)
+        metal = (150, 150, 150)
+        oro = (218, 165, 32)
+
+        # Cuerpo - Túnica con patrón tribal
+        body_rect = pygame.Rect(center - 11, center - 7, 22, 18)
+        pygame.draw.rect(surface, verde_bosque, body_rect)
+        pygame.draw.rect(surface, marron_cuero, body_rect, 2)
+
+        # Patrón tribal (líneas diagonales)
+        for i in range(3):
+            pygame.draw.line(surface, (50, 90, 50),
+                           (center - 8 + i*5, center - 5),
+                           (center - 5 + i*5, center + 5), 2)
+
+        # Escudo ovalado característico galo
+        shield_points = [
+            (center - 16, center - 2),
+            (center - 18, center + 5),
+            (center - 12, center + 8),
+            (center - 10, center + 1)
+        ]
+        pygame.draw.polygon(surface, marron_cuero, shield_points)
+        pygame.draw.polygon(surface, verde_bosque, shield_points, 2)
+        pygame.draw.circle(surface, metal, (center - 14, center + 3), 3)
+
+        # Espada larga gala (Spatha)
+        pygame.draw.line(surface, metal,
+                        (center + 8, center + 8),
+                        (center + 17, center - 15), 3)
+        pygame.draw.circle(surface, oro, (center + 17, center - 15), 2)
+
+        # Cabeza
+        pygame.draw.circle(surface, piel, (center, center - 13), 7)
+
+        # Cabello largo (trenzas galas)
+        for offset in [-6, 6]:
+            pygame.draw.line(surface, (120, 80, 40),
+                           (center + offset, center - 13),
+                           (center + offset, center - 5), 3)
+
+        # Bigote galo prominente
+        bigote_rect = pygame.Rect(center - 5, center - 13, 10, 6)
+        pygame.draw.arc(surface, (120, 80, 40), bigote_rect, math.pi, 2*math.pi, 2)
+
+        # Torques (collar de oro - símbolo galo)
+        torques_rect = pygame.Rect(center - 6, center - 8, 12, 8)
+        pygame.draw.arc(surface, oro, torques_rect, 0, math.pi, 3)
+
+        # Pantalones (braies - característico galo)
+        pygame.draw.line(surface, verde_bosque,
+                        (center - 5, center + 10),
+                        (center - 5, center + 20), 4)
+        pygame.draw.line(surface, verde_bosque,
+                        (center + 5, center + 10),
+                        (center + 5, center + 20), 4)
+
+    def _draw_espadas_elegidas(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Espadas Elegidas (Soldurii) - élite gala"""
+        azul_oscuro = (40, 80, 120)
+        plata = (192, 192, 192)
+        oro = (218, 165, 32)
+
+        # Cota de malla
+        body_rect = pygame.Rect(center - 13, center - 9, 26, 22)
+        pygame.draw.rect(surface, plata, body_rect)
+
+        # Patrón de malla
+        for i in range(3):
+            for j in range(4):
+                pygame.draw.circle(surface, (150, 150, 150),
+                                 (center - 10 + j*6, center - 7 + i*6), 1)
+
+        # Sobreveste con decoración
+        vest_rect = pygame.Rect(center - 11, center - 8, 22, 18)
+        pygame.draw.rect(surface, azul_oscuro, vest_rect)
+        pygame.draw.rect(surface, oro, vest_rect, 2)
+
+        # Escudo hexagonal grande
+        shield_points = [
+            (center - 20, center - 4),
+            (center - 18, center - 10),
+            (center - 9, center - 10),
+            (center - 7, center - 4),
+            (center - 9, center + 14),
+            (center - 18, center + 14)
+        ]
+        pygame.draw.polygon(surface, azul_oscuro, shield_points)
+        pygame.draw.polygon(surface, oro, shield_points, 3)
+        pygame.draw.circle(surface, plata, (center - 14, center + 2), 4)
+        pygame.draw.circle(surface, oro, (center - 14, center + 2), 4, 2)
+
+        # Espada larga de élite
+        pygame.draw.line(surface, plata,
+                        (center + 10, center + 5),
+                        (center + 18, center - 14), 4)
+        pygame.draw.rect(surface, oro, (center + 13, center - 6, 3, 8))
+        pygame.draw.circle(surface, oro, (center + 18, center - 14), 3)
+
+        # Casco celta con adornos
+        helmet_rect = pygame.Rect(center - 9, center - 18, 18, 11)
+        pygame.draw.ellipse(surface, plata, helmet_rect)
+        pygame.draw.ellipse(surface, oro, helmet_rect, 2)
+
+        # Cresta/penacho
+        for i in range(4):
+            pygame.draw.line(surface, (150, 50, 50),
+                           (center - 4 + i*2, center - 19),
+                           (center - 4 + i*2, center - 24), 2)
+
+        # Piernas con grebas
+        pygame.draw.rect(surface, plata, (center - 6, center + 11, 4, 11))
+        pygame.draw.rect(surface, plata, (center + 2, center + 11, 4, 11))
+        pygame.draw.rect(surface, oro, (center - 6, center + 11, 4, 11), 1)
+        pygame.draw.rect(surface, oro, (center + 2, center + 11, 4, 11), 1)
+
+    def _draw_fanaticos_desnudos(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Fanáticos Desnudos (Gaesatae) - berserkers"""
+        piel = (180, 140, 100)
+        pintura_guerra = (150, 40, 40)
+        metal = (150, 150, 150)
+
+        # Cuerpo desnudo musculoso
+        torso_points = [
+            (center - 10, center - 8),
+            (center + 10, center - 8),
+            (center + 12, center + 6),
+            (center - 12, center + 6)
+        ]
+        pygame.draw.polygon(surface, piel, torso_points)
+
+        # Pintura de guerra (espirales celtas)
+        for radio in [3, 5, 7]:
+            pygame.draw.circle(surface, pintura_guerra,
+                             (center - 4, center - 2), radio, 1)
+
+        # Líneas tribales
+        pygame.draw.line(surface, pintura_guerra,
+                        (center - 8, center - 5),
+                        (center + 8, center - 5), 2)
+        pygame.draw.line(surface, pintura_guerra,
+                        (center - 6, center),
+                        (center + 6, center), 2)
+
+        # Gran espada de dos manos
+        pygame.draw.line(surface, metal,
+                        (center + 15, center + 10),
+                        (center + 22, center - 20), 5)
+        pygame.draw.rect(surface, (101, 67, 33), (center + 17, center - 8, 3, 12))
+        pygame.draw.circle(surface, (100, 80, 20), (center + 22, center - 20), 3)
+
+        # Segunda arma (dual wield)
+        pygame.draw.line(surface, metal,
+                        (center - 12, center + 8),
+                        (center - 18, center - 15), 3)
+
+        # Cabeza con cabello erizado (cal)
+        pygame.draw.circle(surface, piel, (center, center - 14), 7)
+
+        # Cabello salvaje con cal (blanco)
+        for i in range(7):
+            angulo = (i - 3) * 0.4
+            x = center + int(6 * math.sin(angulo))
+            y = center - 14 + int(-6 * math.cos(angulo))
+            pygame.draw.line(surface, (220, 220, 180),
+                           (center, center - 14), (x, y), 2)
+
+        # Ojos furiosos
+        pygame.draw.circle(surface, pintura_guerra, (center - 2, center - 14), 2)
+        pygame.draw.circle(surface, pintura_guerra, (center + 2, center - 14), 2)
+
+        # Piernas desnudas
+        pygame.draw.line(surface, piel,
+                        (center - 5, center + 6),
+                        (center - 5, center + 20), 5)
+        pygame.draw.line(surface, piel,
+                        (center + 5, center + 6),
+                        (center + 5, center + 20), 5)
+
+    def _draw_escaramuzadores(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Escaramuzadores (Funditores) - infantería ligera"""
+        verde_oliva = (90, 100, 70)
+        cuero_claro = (160, 140, 100)
+        piel = (180, 140, 100)
+
+        # Cuerpo ligero
+        body_rect = pygame.Rect(center - 9, center - 6, 18, 15)
+        pygame.draw.rect(surface, verde_oliva, body_rect)
+        pygame.draw.rect(surface, cuero_claro, body_rect, 1)
+
+        # Mochila con proyectiles
+        mochila_points = [
+            (center + 8, center - 4),
+            (center + 12, center - 6),
+            (center + 12, center + 2),
+            (center + 8, center + 4)
+        ]
+        pygame.draw.polygon(surface, cuero_claro, mochila_points)
+
+        # Honda en la mano
+        honda_rect = pygame.Rect(center - 20, center - 10, 15, 20)
+        pygame.draw.arc(surface, (139, 90, 43), honda_rect, -math.pi/3, math.pi/3, 2)
+        pygame.draw.circle(surface, (100, 100, 100), (center - 15, center), 3)
+
+        # Jabalinas en la espalda
+        for i in range(3):
+            x_offset = i * 2
+            pygame.draw.line(surface, (101, 67, 33),
+                           (center + 6 + x_offset, center - 5),
+                           (center + 8 + x_offset, center - 16), 2)
+            pygame.draw.circle(surface, (120, 120, 120),
+                             (center + 8 + x_offset, center - 16), 2)
+
+        # Escudo pequeño de mimbre
+        pygame.draw.circle(surface, (139, 90, 43), (center + 10, center + 2), 5)
+        pygame.draw.circle(surface, cuero_claro, (center + 10, center + 2), 5, 1)
+
+        # Cabeza con gorro
+        pygame.draw.circle(surface, piel, (center, center - 12), 6)
+        gorro_points = [
+            (center - 6, center - 11),
+            (center, center - 15),
+            (center + 6, center - 11)
+        ]
+        pygame.draw.polygon(surface, cuero_claro, gorro_points)
+
+        # Piernas ligeras
+        pygame.draw.line(surface, verde_oliva,
+                        (center - 4, center + 8),
+                        (center - 4, center + 18), 3)
+        pygame.draw.line(surface, verde_oliva,
+                        (center + 4, center + 8),
+                        (center + 4, center + 18), 3)
+
+    def _draw_caballeria_barbara(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Caballería Bárbara - caballería ligera gala"""
+        marron = (100, 70, 40)
+        cuero = (160, 130, 90)
+        caballo_oscuro = (80, 50, 30)
+        metal = (150, 150, 150)
+
+        # Caballo - cuerpo
+        horse_body = pygame.Rect(center - 16, center + 2, 32, 14)
+        pygame.draw.ellipse(surface, caballo_oscuro, horse_body)
+
+        # Cabeza del caballo
+        head_points = [
+            (center - 18, center + 4),
+            (center - 24, center - 2),
+            (center - 23, center - 6),
+            (center - 17, center - 3)
+        ]
+        pygame.draw.polygon(surface, caballo_oscuro, head_points)
+        pygame.draw.circle(surface, (255, 255, 255), (center - 20, center - 2), 2)
+        pygame.draw.circle(surface, (0, 0, 0), (center - 20, center - 2), 1)
+
+        # Crin
+        for i in range(5):
+            pygame.draw.line(surface, (60, 40, 20),
+                           (center - 18 + i*3, center - 3),
+                           (center - 18 + i*3, center - 8), 2)
+
+        # Patas
+        patas = [
+            (center - 12, center + 14, center - 12, center + 22),
+            (center - 6, center + 14, center - 7, center + 20),
+            (center + 6, center + 14, center + 5, center + 21),
+            (center + 12, center + 14, center + 12, center + 22)
+        ]
+        for x1, y1, x2, y2 in patas:
+            pygame.draw.line(surface, caballo_oscuro, (x1, y1), (x2, y2), 3)
+
+        # Jinete
+        rider_rect = pygame.Rect(center - 9, center - 10, 18, 16)
+        pygame.draw.rect(surface, marron, rider_rect)
+        pygame.draw.rect(surface, cuero, rider_rect, 2)
+
+        # Lanza
+        pygame.draw.line(surface, (101, 67, 33),
+                        (center + 8, center - 6),
+                        (center + 22, center - 22), 3)
+        punta = [
+            (center + 22, center - 24),
+            (center + 20, center - 22),
+            (center + 24, center - 22)
+        ]
+        pygame.draw.polygon(surface, metal, punta)
+
+        # Escudo
+        shield_rect = pygame.Rect(center - 16, center - 6, 8, 14)
+        pygame.draw.ellipse(surface, cuero, shield_rect)
+        pygame.draw.ellipse(surface, marron, shield_rect, 2)
+
+        # Casco simple
+        helmet_rect = pygame.Rect(center - 7, center - 17, 14, 9)
+        pygame.draw.ellipse(surface, (120, 100, 80), helmet_rect)
+
+        # Cola
+        cola_points = [
+            (center + 16, center + 6),
+            (center + 24, center + 10),
+            (center + 22, center + 14)
+        ]
+        pygame.draw.lines(surface, (60, 40, 20), False, cola_points, 3)
+
+    def _draw_caballeria_noble(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Caballería Noble - élite montada gala"""
+        purpura = (80, 40, 100)
+        oro = (218, 165, 32)
+        caballo_noble = (60, 60, 80)
+        plata = (192, 192, 192)
+
+        # Caballo de guerra con armadura
+        horse_body = pygame.Rect(center - 17, center + 1, 34, 16)
+        pygame.draw.ellipse(surface, caballo_noble, horse_body)
+        pygame.draw.ellipse(surface, plata, horse_body, 2)
+
+        # Cabeza con armadura
+        head_points = [
+            (center - 19, center + 3),
+            (center - 26, center - 4),
+            (center - 24, center - 8),
+            (center - 17, center - 4)
+        ]
+        pygame.draw.polygon(surface, caballo_noble, head_points)
+        pygame.draw.polygon(surface, plata, head_points, 2)
+        pygame.draw.circle(surface, oro, (center - 22, center - 4), 3)
+
+        # Crin trenzada
+        for i in range(4):
+            x = center - 19 + i*3
+            pygame.draw.line(surface, (40, 40, 60),
+                           (x, center - 4), (x, center - 10), 3)
+            pygame.draw.circle(surface, oro, (x, center - 10), 1)
+
+        # Patas con protección
+        for x_offset in [-13, -7, 7, 13]:
+            x = center + x_offset
+            pygame.draw.line(surface, caballo_noble, (x, center + 15), (x, center + 23), 4)
+            pygame.draw.line(surface, plata, (x, center + 15), (x, center + 19), 2)
+
+        # Jinete aristocrático
+        rider_rect = pygame.Rect(center - 10, center - 12, 20, 18)
+        pygame.draw.rect(surface, plata, rider_rect)
+        vest_rect = pygame.Rect(center - 8, center - 11, 16, 16)
+        pygame.draw.rect(surface, purpura, vest_rect)
+        pygame.draw.rect(surface, oro, vest_rect, 2)
+
+        # Espada noble
+        pygame.draw.line(surface, plata,
+                        (center + 9, center - 2),
+                        (center + 19, center - 16), 4)
+        pygame.draw.rect(surface, oro, (center + 13, center - 10, 3, 8))
+        pygame.draw.circle(surface, oro, (center + 19, center - 16), 3)
+        pygame.draw.circle(surface, (200, 50, 50), (center + 19, center - 16), 1)
+
+        # Escudo noble con heráldica
+        shield_rect = pygame.Rect(center - 18, center - 8, 10, 18)
+        pygame.draw.ellipse(surface, purpura, shield_rect)
+        pygame.draw.ellipse(surface, oro, shield_rect, 3)
+        pygame.draw.ellipse(surface, oro, (center - 15, center - 2, 4, 6))
+
+        # Casco noble con cresta
+        helmet_rect = pygame.Rect(center - 8, center - 20, 16, 10)
+        pygame.draw.ellipse(surface, plata, helmet_rect)
+        pygame.draw.ellipse(surface, oro, helmet_rect, 2)
+
+        # Plumas nobles
+        for i in range(5):
+            pygame.draw.line(surface, (150, 50, 50),
+                           (center - 6 + i*3, center - 21),
+                           (center - 6 + i*3, center - 26), 2)
+
+        # Cola decorada
+        cola_points = [
+            (center + 17, center + 7),
+            (center + 25, center + 11),
+            (center + 23, center + 16)
+        ]
+        pygame.draw.lines(surface, (40, 40, 60), False, cola_points, 4)
+
+    def _draw_carros_guerra(self, surface: pygame.Surface, center: int, size: int):
+        """Dibuja Carros de Guerra (Esseda) - unidad especial britana"""
+        azul_acero = (60, 90, 120)
+        madera = (101, 67, 33)
+        metal = (150, 150, 150)
+        caballo = (80, 60, 40)
+
+        # Ruedas
+        for x_offset in [-10, 10]:
+            wheel_center = (center + x_offset, center + 12)
+            pygame.draw.circle(surface, madera, wheel_center, 8)
+            pygame.draw.circle(surface, metal, wheel_center, 8, 2)
+            # Radios
+            for angulo in [0, math.pi/3, 2*math.pi/3, math.pi, 4*math.pi/3, 5*math.pi/3]:
+                x_fin = wheel_center[0] + int(7 * math.cos(angulo))
+                y_fin = wheel_center[1] + int(7 * math.sin(angulo))
+                pygame.draw.line(surface, madera, wheel_center, (x_fin, y_fin), 1)
+
+        # Plataforma
+        platform_rect = pygame.Rect(center - 14, center - 2, 28, 12)
+        pygame.draw.rect(surface, madera, platform_rect)
+        pygame.draw.rect(surface, metal, platform_rect, 2)
+
+        # Barandilla frontal
+        rail_rect = pygame.Rect(center - 14, center - 8, 28, 10)
+        pygame.draw.arc(surface, metal, rail_rect, 0, math.pi, 3)
+
+        # Eje
+        pygame.draw.line(surface, metal,
+                        (center - 12, center + 12),
+                        (center + 12, center + 12), 4)
+
+        # Caballos (dos)
+        # Caballo izquierdo
+        horse_body_l = pygame.Rect(center - 22, center - 6, 14, 8)
+        pygame.draw.ellipse(surface, caballo, horse_body_l)
+        pygame.draw.circle(surface, caballo, (center - 26, center - 8), 4)
+        pygame.draw.line(surface, caballo, (center - 20, center + 2), (center - 20, center + 10), 2)
+        pygame.draw.line(surface, caballo, (center - 24, center + 2), (center - 24, center + 10), 2)
+
+        # Caballo derecho
+        horse_body_r = pygame.Rect(center + 8, center - 6, 14, 8)
+        pygame.draw.ellipse(surface, caballo, horse_body_r)
+        pygame.draw.circle(surface, caballo, (center + 26, center - 8), 4)
+        pygame.draw.line(surface, caballo, (center + 20, center + 2), (center + 20, center + 10), 2)
+        pygame.draw.line(surface, caballo, (center + 24, center + 2), (center + 24, center + 10), 2)
+
+        # Riendas
+        pygame.draw.line(surface, (139, 90, 43), (center - 26, center - 8), (center - 5, center - 4), 1)
+        pygame.draw.line(surface, (139, 90, 43), (center + 26, center - 8), (center + 5, center - 4), 1)
+
+        # Guerrero en el carro
+        warrior_rect = pygame.Rect(center - 6, center - 12, 12, 14)
+        pygame.draw.rect(surface, azul_acero, warrior_rect)
+        pygame.draw.rect(surface, metal, warrior_rect, 1)
+
+        # Casco
+        helmet_rect = pygame.Rect(center - 5, center - 18, 10, 8)
+        pygame.draw.ellipse(surface, metal, helmet_rect)
+
+        # Lanza
+        pygame.draw.line(surface, madera,
+                        (center + 6, center - 8),
+                        (center + 18, center - 22), 2)
+        punta = [
+            (center + 18, center - 24),
+            (center + 16, center - 22),
+            (center + 20, center - 22)
+        ]
+        pygame.draw.polygon(surface, metal, punta)
+
+        # Escudo en el carro
+        pygame.draw.circle(surface, azul_acero, (center - 10, center - 6), 5)
+        pygame.draw.circle(surface, metal, (center - 10, center - 6), 5, 1)

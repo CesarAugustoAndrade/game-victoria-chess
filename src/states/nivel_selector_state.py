@@ -13,8 +13,11 @@ from src.utils.save_manager import save_manager
 class NivelSelectorState(State):
     """Estado para seleccionar niveles de la campaña"""
 
-    def __init__(self, game, campania=None, cargar_guardado=False):
+    def __init__(self, game, campania=None, tipo_campania='tutorial', cargar_guardado=False):
         super().__init__(game)
+
+        # Determinar qué tipo de campaña usar
+        self.tipo_campania = tipo_campania
 
         # Cargar campaña: desde parámetro, desde guardado, o nueva
         if campania:
@@ -23,13 +26,23 @@ class NivelSelectorState(State):
             # Intentar cargar progreso guardado
             save_data = save_manager.load_campaign()
             if save_data:
-                self.campania = CampaniaNiveles.from_dict(save_data)
-                print(f"[SELECTOR] Campaña cargada - Progreso: {int(self.campania.progreso_campania * 100)}%")
+                # Detectar tipo de campaña desde guardado
+                saved_tipo = save_data.get('tipo_campania', 'tutorial')
+                self.tipo_campania = saved_tipo
+
+                if saved_tipo == 'galia':
+                    from src.domain.campania_galia import CampaniaCesarGalia
+                    self.campania = CampaniaCesarGalia.from_dict(save_data)
+                else:
+                    self.campania = CampaniaNiveles.from_dict(save_data)
+                print(f"[SELECTOR] Campaña {saved_tipo} cargada - Progreso: {int(self.campania.progreso_campania * 100)}%")
             else:
-                self.campania = CampaniaNiveles()
+                # Sin guardado, crear nueva según tipo
+                self.campania = self._crear_campania_nueva(tipo_campania)
                 print("[SELECTOR] No se encontró guardado, iniciando campaña nueva")
         else:
-            self.campania = CampaniaNiveles()
+            # Nueva campaña del tipo especificado
+            self.campania = self._crear_campania_nueva(tipo_campania)
 
         self.buttons = []
         self.scroll_offset = 0
@@ -41,6 +54,14 @@ class NivelSelectorState(State):
         self.small_font = pygame.font.Font(None, 18)
 
         self.setup_buttons()
+
+    def _crear_campania_nueva(self, tipo_campania):
+        """Crea una nueva campaña del tipo especificado"""
+        if tipo_campania == 'galia':
+            from src.domain.campania_galia import CampaniaCesarGalia
+            return CampaniaCesarGalia()
+        else:
+            return CampaniaNiveles()
 
     def on_enter(self):
         """Reconstruir botones cuando se vuelve a este estado"""
@@ -92,9 +113,9 @@ class NivelSelectorState(State):
             self.game.change_state(BatallaState(self.game, nivel, self.campania))
 
     def volver_menu(self):
-        """Vuelve al menú principal"""
-        from src.states.menu_state import MenuState
-        self.game.change_state(MenuState(self.game))
+        """Vuelve al selector de campañas"""
+        from src.states.selector_campania_state import SelectorCampaniaState
+        self.game.change_state(SelectorCampaniaState(self.game, es_continuar=False))
 
     def handle_event(self, event):
         """Maneja eventos del selector de niveles"""
@@ -117,8 +138,15 @@ class NivelSelectorState(State):
         # Bordes decorativos
         pygame.draw.rect(screen, (150, 100, 50), (0, 0, WINDOW_WIDTH, 80))
 
-        # Título
-        title_text = self.title_font.render("CAMPAÑA ROMANA", True, (139, 69, 19))
+        # Título según tipo de campaña
+        if self.tipo_campania == 'galia':
+            titulo = "CÉSAR EN LA GALIA"
+            color_titulo = (70, 120, 70)  # Verde galo
+        else:
+            titulo = "CAMPAÑA TUTORIAL"
+            color_titulo = (139, 69, 19)  # Marrón romano
+
+        title_text = self.title_font.render(titulo, True, color_titulo)
         title_rect = title_text.get_rect(centerx=WINDOW_WIDTH // 2, y=20)
         screen.blit(title_text, title_rect)
 

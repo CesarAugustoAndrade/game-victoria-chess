@@ -80,17 +80,17 @@ class MenuState(State):
 
     def continue_campaign(self):
         """Continúa la campaña cargando el progreso guardado"""
-        from src.states.nivel_selector_state import NivelSelectorState
-        self.game.change_state(NivelSelectorState(self.game, cargar_guardado=True))
+        from src.states.selector_campania_state import SelectorCampaniaState
+        self.game.change_state(SelectorCampaniaState(self.game, es_continuar=True))
 
     def new_campaign(self):
-        """Inicia una nueva campaña (sobrescribe guardado si existe)"""
-        from src.states.nivel_selector_state import NivelSelectorState
+        """Inicia una nueva campaña (permite elegir entre Tutorial o César)"""
+        from src.states.selector_campania_state import SelectorCampaniaState
         # Si existe guardado, eliminarlo para empezar de cero
         if self.save_exists:
             save_manager.delete_save()
             print("[MENU] Guardado anterior eliminado - Iniciando nueva campaña")
-        self.game.change_state(NivelSelectorState(self.game))
+        self.game.change_state(SelectorCampaniaState(self.game, es_continuar=False))
 
     def start_quick_battle(self):
         """Inicia una batalla rápida con ejércitos completos"""
