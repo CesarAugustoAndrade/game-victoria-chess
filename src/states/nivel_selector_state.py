@@ -22,24 +22,22 @@ class NivelSelectorState(State):
         # Cargar campaña: desde parámetro, desde guardado, o nueva
         if campania:
             self.campania = campania
+            self.tipo_campania = getattr(campania, 'tipo_campania', tipo_campania)
         elif cargar_guardado:
-            # Intentar cargar progreso guardado
-            save_data = save_manager.load_campaign()
+            # ARREGLO: Cargar progreso guardado de la campaña específica seleccionada
+            save_data = save_manager.load_campaign(tipo_campania)
             if save_data:
-                # Detectar tipo de campaña desde guardado
-                saved_tipo = save_data.get('tipo_campania', 'tutorial')
-                self.tipo_campania = saved_tipo
-
-                if saved_tipo == 'galia':
+                # Cargar progreso de la campaña correcta
+                if tipo_campania == 'galia':
                     from src.domain.campania_galia import CampaniaCesarGalia
                     self.campania = CampaniaCesarGalia.from_dict(save_data)
                 else:
                     self.campania = CampaniaNiveles.from_dict(save_data)
-                print(f"[SELECTOR] Campaña {saved_tipo} cargada - Progreso: {int(self.campania.progreso_campania * 100)}%")
+                print(f"[SELECTOR] Campaña {tipo_campania} cargada - Progreso: {int(self.campania.progreso_campania * 100)}%")
             else:
-                # Sin guardado, crear nueva según tipo
+                # Sin guardado para esta campaña, crear nueva
                 self.campania = self._crear_campania_nueva(tipo_campania)
-                print("[SELECTOR] No se encontró guardado, iniciando campaña nueva")
+                print(f"[SELECTOR] No se encontró guardado para '{tipo_campania}', iniciando nueva campaña")
         else:
             # Nueva campaña del tipo especificado
             self.campania = self._crear_campania_nueva(tipo_campania)
