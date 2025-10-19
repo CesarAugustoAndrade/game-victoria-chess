@@ -35,6 +35,9 @@ class SelectorCampaniaState(State):
         super().__init__(game)
         self.es_continuar = es_continuar
 
+        # ARREGLO: Importar save_manager aquí para detectar progreso
+        from src.utils.save_manager import save_manager
+
         # Configuración de campañas disponibles
         self.campanias = [
             {
@@ -51,7 +54,9 @@ class SelectorCampaniaState(State):
                 'color_secundario': COLOR_DORADO,
                 'icono': '⚔',
                 'dificultad': 'Progresiva',
-                'niveles': 9
+                'niveles': 9,
+                'progreso': None,  # Se llenará abajo
+                'tiene_guardado': False
             },
             {
                 'id': 'galia',
@@ -67,9 +72,25 @@ class SelectorCampaniaState(State):
                 'color_secundario': (218, 165, 32),  # Oro
                 'icono': '🛡',
                 'dificultad': 'Histórica',
-                'niveles': 9
+                'niveles': 9,
+                'progreso': None,  # Se llenará abajo
+                'tiene_guardado': False
             }
         ]
+
+        # ARREGLO: Detectar y mostrar progreso de cada campaña
+        for campania in self.campanias:
+            info = save_manager.get_save_info(campania['id'])
+            if info:
+                campania['tiene_guardado'] = True
+                progreso_pct = int(info['progreso'] * 100)
+                niveles_completados = info.get('niveles_completados_count', 0)
+                campania['progreso'] = f"{progreso_pct}% ({niveles_completados}/{campania['niveles']})"
+                campania['nivel_actual'] = info.get('nivel_actual', 0) + 1  # +1 para mostrar número humano
+            else:
+                campania['tiene_guardado'] = False
+                campania['progreso'] = "Nueva Campaña"
+                campania['nivel_actual'] = 1
 
         self.campania_seleccionada = None
         self.hover_campania = None
@@ -329,6 +350,26 @@ class CampaniaCard(Button):
         niv_surf = self.info_font.render(niv_text, True, COLOR_BLANCO)
         niv_rect = niv_surf.get_rect(centerx=self.rect.centerx, top=current_y + 25)
         screen.blit(niv_surf, niv_rect)
+
+        # ARREGLO: Mostrar progreso si existe guardado
+        if self.campania['tiene_guardado']:
+            # Fondo para progreso
+            prog_bg = pygame.Rect(self.rect.left + 10, self.rect.top + 10, self.rect.width - 20, 30)
+            pygame.draw.rect(screen, (0, 0, 0, 128), prog_bg)
+            pygame.draw.rect(screen, self.accent_color, prog_bg, 1)
+
+            # Texto de progreso
+            prog_font = pygame.font.Font(None, 24)
+            prog_text = f"PROGRESO: {self.campania['progreso']}"
+            prog_surf = prog_font.render(prog_text, True, self.accent_color)
+            prog_rect = prog_surf.get_rect(center=prog_bg.center)
+            screen.blit(prog_surf, prog_rect)
+
+            # Indicador de nivel actual
+            nivel_text = f"Nivel {self.campania['nivel_actual']}"
+            nivel_surf = self.info_font.render(nivel_text, True, (255, 255, 100))
+            nivel_rect = nivel_surf.get_rect(centerx=self.rect.centerx, top=prog_bg.bottom + 5)
+            screen.blit(nivel_surf, nivel_rect)
 
         # Efecto de brillo en hover
         if self.is_hovered:

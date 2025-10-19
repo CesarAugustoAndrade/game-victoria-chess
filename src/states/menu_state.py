@@ -86,10 +86,8 @@ class MenuState(State):
     def new_campaign(self):
         """Inicia una nueva campaña (permite elegir entre Tutorial o César)"""
         from src.states.selector_campania_state import SelectorCampaniaState
-        # Si existe guardado, eliminarlo para empezar de cero
-        if self.save_exists:
-            save_manager.delete_save()
-            print("[MENU] Guardado anterior eliminado - Iniciando nueva campaña")
+        # ARREGLO: NO borrar guardados - permitir múltiples campañas en paralelo
+        # El usuario puede tener progreso en Tutorial Y en César simultáneamente
         self.game.change_state(SelectorCampaniaState(self.game, es_continuar=False))
 
     def start_quick_battle(self):

@@ -21,23 +21,73 @@ class SaveManager:
         if not self.save_dir.exists():
             self.save_dir.mkdir(parents=True, exist_ok=True)
 
+    def _migrate_legacy_save(self) -> Optional[Dict[str, Any]]:
+        """
+        Migra el archivo legacy campaign_progress.json al formato nuevo
+
+        Returns:
+            Datos del guardado migrado o None si falla
+        """
+        legacy_file = self.save_dir / "campaign_progress.json"
+        if not legacy_file.exists():
+            return None
+
+        try:
+            # Leer archivo legacy
+            with open(legacy_file, 'r', encoding='utf-8') as f:
+                save_data = json.load(f)
+
+            # Determinar tipo de campaña
+            tipo = save_data.get('tipo_campania', 'tutorial')
+
+            # Normalizar tipo
+            if tipo == 'cesar_galia':
+                tipo = 'galia'
+                save_data['tipo_campania'] = 'galia'  # Actualizar en los datos
+
+            # Obtener archivo destino
+            try:
+                new_file = self._get_save_file(tipo)
+            except ValueError:
+                print(f"[SAVE] Tipo de campaña inválido en archivo legacy: {tipo}")
+                return None
+
+            # Guardar en nuevo archivo
+            with open(new_file, 'w', encoding='utf-8') as f:
+                json.dump(save_data, f, indent=2, ensure_ascii=False)
+
+            print(f"[SAVE] Archivo legacy migrado exitosamente a {new_file.name}")
+
+            # Eliminar archivo legacy
+            legacy_file.unlink()
+            print("[SAVE] Archivo legacy eliminado")
+
+            return save_data
+
+        except Exception as e:
+            print(f"[ERROR] No se pudo migrar archivo legacy: {e}")
+            return None
+
     def _get_save_file(self, tipo_campania: str = None) -> Path:
         """
         ARREGLO: Obtiene el archivo de guardado para una campaña específica
 
         Args:
-            tipo_campania: 'tutorial', 'galia', o None para detectar desde datos
+            tipo_campania: 'tutorial', 'galia', 'cesar_galia'
 
         Returns:
             Path al archivo de guardado
+
+        Raises:
+            ValueError: Si no se especifica tipo_campania
         """
-        if tipo_campania == 'galia':
+        if tipo_campania in ['galia', 'cesar_galia']:
             return self.save_dir / "campaign_galia.json"
         elif tipo_campania == 'tutorial':
             return self.save_dir / "campaign_tutorial.json"
         else:
-            # Legacy: archivo por defecto (asumimos tutorial)
-            return self.save_dir / "campaign_progress.json"
+            # ARREGLO: No usar archivo legacy - forzar especificar tipo
+            raise ValueError(f"Tipo de campaña inválido o no especificado: {tipo_campania}. Use 'tutorial' o 'galia'")
 
     def save_campaign(self, campaign_data: Dict[str, Any]) -> bool:
         """
@@ -77,21 +127,33 @@ class SaveManager:
         ARREGLO: Carga el progreso guardado de una campaña específica
 
         Args:
-            tipo_campania: 'tutorial', 'galia', o None para buscar cualquiera
+            tipo_campania: 'tutorial', 'galia', o None para intentar migración legacy
 
         Returns:
             Diccionario con datos de la campaña, o None si no existe guardado
         """
         if tipo_campania:
+            # Normalizar tipo_campania
+            if tipo_campania == 'cesar_galia':
+                tipo_campania = 'galia'
+
             # Cargar campaña específica
-            save_file = self._get_save_file(tipo_campania)
+            try:
+                save_file = self._get_save_file(tipo_campania)
+            except ValueError:
+                print(f"[SAVE] Tipo de campaña inválido: {tipo_campania}")
+                return None
+
             if not save_file.exists():
                 print(f"[SAVE] No se encontró guardado para '{tipo_campania}'")
                 return None
         else:
-            # Legacy: buscar archivo por defecto
-            save_file = self._get_save_file(None)
-            if not save_file.exists():
+            # Intento de migración legacy
+            legacy_file = self.save_dir / "campaign_progress.json"
+            if legacy_file.exists():
+                print("[SAVE] Migrando archivo legacy campaign_progress.json")
+                return self._migrate_legacy_save()
+            else:
                 print("[SAVE] No se encontró archivo de guardado")
                 return None
 

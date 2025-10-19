@@ -605,7 +605,7 @@ class CampaniaCesarGalia:
     def to_dict(self) -> dict:
         """Serializa la campaña para guardado"""
         return {
-            "tipo_campania": "cesar_galia",
+            "tipo_campania": "galia",  # ARREGLO: Usar nombre consistente
             "nivel_actual": self.nivel_actual,
             "niveles_completados": list(self.niveles_completados),
             "progreso": self.progreso_campania,
