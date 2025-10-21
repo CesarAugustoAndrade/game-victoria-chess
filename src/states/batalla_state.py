@@ -226,8 +226,10 @@ class BatallaState(State):
         eventos_normales = []
 
         for evento in eventos:
-            # Identificar eventos que vienen de acciones IA
-            if isinstance(evento, (EventoAtaqueRealizado, EventoUnidadMovida)) and batalla.turno_actual == TurnoActual.ENEMIGO:
+            # Identificar eventos que vienen de acciones IA (durante turno enemigo)
+            if batalla.turno_actual == TurnoActual.ENEMIGO and isinstance(evento, (
+                EventoAccionIA, EventoAtaqueRealizado, EventoUnidadMovida, EventoUnidadEliminada
+            )):
                 eventos_ia.append(evento)
             else:
                 eventos_normales.append(evento)
@@ -324,6 +326,66 @@ class BatallaState(State):
                 import random
                 self.renderer.screen_shake = 3
 
+        # Encolar eventos de IA para procesamiento secuencial
+        if eventos_ia:
+            self.ia_events_queue.extend(eventos_ia)
+            self.ia_event_timer = 0  # Reset timer para empezar inmediatamente
+
+    def _procesar_evento_ia(self, evento):
+        """Procesa un solo evento de IA con efectos visuales"""
+        batalla = self.servicio_juego.obtener_batalla_actual()
+        if not batalla:
+            return
+
+        if isinstance(evento, EventoAccionIA):
+            # Mostrar mensaje de acción IA
+            self._mostrar_mensaje(f"[IA] {evento.mensaje}")
+
+        elif isinstance(evento, EventoAtaqueRealizado):
+            # Mostrar grito de guerra
+            if evento.grito_guerra:
+                self._mostrar_mensaje(evento.grito_guerra)
+
+            # Buscar las unidades para obtener sus posiciones
+            atacante = None
+            defensor = None
+
+            for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
+                if unidad.id == evento.resultado.atacante_id:
+                    atacante = unidad
+                if unidad.id == evento.resultado.defensor_id:
+                    defensor = unidad
+
+            if atacante and defensor:
+                self.renderer.trigger_attack_effect(
+                    atacante.posicion,
+                    defensor.posicion,
+                    atacante.tipo,
+                    evento.resultado.danio_infligido
+                )
+
+        elif isinstance(evento, EventoUnidadMovida):
+            # Efectos de movimiento
+            unidad_movida = None
+            for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
+                if unidad.id == evento.unidad_id:
+                    unidad_movida = unidad
+                    break
+
+            if unidad_movida:
+                self.renderer.trigger_unit_move(evento.posicion_destino, unidad_movida.tipo)
+
+        elif isinstance(evento, EventoUnidadEliminada):
+            # Mostrar mensaje de eliminación
+            self._mostrar_mensaje(evento.mensaje)
+
+            # Efectos de muerte épicos
+            for ejercito in [batalla.ejercito_jugador, batalla.ejercito_enemigo]:
+                for unidad in ejercito._unidades:  # Incluir muertas
+                    if unidad.id == evento.unidad_id:
+                        self.renderer.trigger_unit_death(unidad.posicion, unidad.tipo)
+                        break
+
     def _actualizar_highlights(self):
         """Actualiza las casillas resaltadas"""
         batalla = self.servicio_juego.obtener_batalla_actual()
@@ -346,8 +408,18 @@ class BatallaState(State):
             self.mensaje_actual = ""
             self.tiempo_mensaje = 0
 
+        # ===== SISTEMA DE PROCESAMIENTO DE EVENTOS IA =====
+        if self.ia_events_queue:
+            self.ia_event_timer += dt
+
+            # Procesar siguiente evento cuando pase el delay
+            if self.ia_event_timer >= self.ia_event_delay:
+                evento = self.ia_events_queue.pop(0)  # Sacar el primer evento
+                self._procesar_evento_ia(evento)  # Procesar individualmente
+                self.ia_event_timer = 0  # Reset timer
+
         # ===== SISTEMA DE AUTO-PLAY =====
-        if self.auto_play_enabled:
+        elif self.auto_play_enabled:
             batalla = self.servicio_juego.obtener_batalla_actual()
 
             # Solo ejecutar auto-play en turno del jugador y si la batalla no ha terminado
