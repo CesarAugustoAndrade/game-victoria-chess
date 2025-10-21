@@ -124,24 +124,21 @@ class CinematicCamera:
             self.y = y
 
     def set_zoom(self, zoom: float, instant: bool = False):
-        """Establece el nivel de zoom"""
-        self.target_zoom = max(0.5, min(3.0, zoom))
-        if instant:
-            self.zoom = self.target_zoom
+        """Establece el nivel de zoom - DESACTIVADO"""
+        # Mantener zoom en 1.0 siempre (sin zoom)
+        self.zoom = 1.0
+        self.target_zoom = 1.0
 
     def shake_camera(self, intensity: float, duration: float = 0.5,
                      frequency: float = 30.0):
-        """Inicia temblor de cámara"""
-        self.shake.intensity = intensity
-        self.shake.duration = duration
-        self.shake.frequency = frequency
-        self.shake.elapsed = 0.0
-        self.shake.decay = 0.95
+        """Inicia temblor de cámara - DESACTIVADO"""
+        # No hacer nada - shake desactivado
+        pass
 
     def add_trauma(self, trauma: float):
-        """Añade trauma a la cámara (para shake acumulativo)"""
-        self.shake.intensity = min(1.0, self.shake.intensity + trauma)
-        self.shake.duration = max(self.shake.duration, 0.5)
+        """Añade trauma a la cámara (para shake acumulativo) - DESACTIVADO"""
+        # No hacer nada - shake desactivado
+        pass
 
     def screen_flash(self, color: Tuple[int, int, int] = (255, 255, 255),
                     alpha: int = 200):
@@ -157,12 +154,9 @@ class CinematicCamera:
 
     def focus_on_point(self, x: float, y: float, zoom: float = 1.3,
                       duration: float = 0.5):
-        """Enfoca en un punto con zoom dramático"""
-        self.set_position(x - self.screen_width // (2 * zoom),
-                         y - self.screen_height // (2 * zoom))
-        self.set_zoom(zoom)
-        self.focus_point = (x, y)
-        self.focus_strength = 1.0
+        """Enfoca en un punto con zoom dramático - DESACTIVADO"""
+        # No hacer nada - zoom desactivado
+        pass
 
     def enter_cinematic_mode(self):
         """Entra en modo cinemático con letterbox"""
@@ -253,25 +247,10 @@ class CinematicCamera:
             # Rotación instantánea
             self.rotation = self.target_rotation
 
-        # Actualizar shake
-        if self.shake.intensity > 0:
-            self.shake.elapsed += delta_time
-
-            if self.shake.elapsed < self.shake.duration:
-                # Calcular offset de shake
-                shake_amount = self.shake.intensity * self.shake.intensity  # Exponencial para más impacto
-
-                # Usar perlin noise simulado para movimiento más natural
-                time = self.shake.elapsed * self.shake.frequency
-                self.shake.offset_x = math.sin(time * 2.1) * shake_amount * 10
-                self.shake.offset_y = math.cos(time * 1.7) * shake_amount * 10
-
-                # Aplicar decay
-                self.shake.intensity *= self.shake.decay
-            else:
-                self.shake.intensity = 0
-                self.shake.offset_x = 0
-                self.shake.offset_y = 0
+        # Shake desactivado - mantener offsets en 0
+        self.shake.intensity = 0
+        self.shake.offset_x = 0
+        self.shake.offset_y = 0
 
         # Actualizar flash
         if self.flash_alpha > 0:
@@ -450,70 +429,21 @@ class CombatZoomController:
 
     def start_combat(self, attacker_pos: Tuple[float, float],
                     defender_pos: Tuple[float, float]):
-        """Inicia zoom de combate"""
-        if not self.auto_zoom_enabled:
-            return
-
-        self.combat_active = True
-        self.combat_timer = 0.0  # Reset timer
-
-        # Calcular punto medio entre atacante y defensor
-        center_x = (attacker_pos[0] + defender_pos[0]) / 2
-        center_y = (attacker_pos[1] + defender_pos[1]) / 2
-
-        # Calcular distancia para determinar zoom
-        distance = math.sqrt((attacker_pos[0] - defender_pos[0]) ** 2 +
-                           (attacker_pos[1] - defender_pos[1]) ** 2)
-
-        # Zoom basado en distancia
-        if distance < 100:
-            zoom = ZoomMode.DRAMATIC.value
-        elif distance < 200:
-            zoom = ZoomMode.COMBAT_FOCUS.value
-        else:
-            zoom = ZoomMode.NORMAL.value
-
-        # Aplicar zoom y centrar
-        self.camera.focus_on_point(center_x, center_y, zoom)
-
-        # Añadir shake proporcional
-        self.camera.add_trauma(0.3)
-
-        # Flash sutil
-        self.camera.screen_flash((255, 255, 255), 50)
+        """Inicia zoom de combate - DESACTIVADO"""
+        # No hacer nada - zoom y efectos de cámara desactivados
+        pass
 
     def end_combat(self):
-        """Termina el zoom de combate"""
-        self.combat_active = False
-        self.camera.set_zoom(ZoomMode.NORMAL.value)
+        """Termina el zoom de combate - DESACTIVADO"""
+        # No hacer nada - zoom desactivado
+        pass
 
     def critical_hit(self):
-        """Efecto para golpe crítico"""
-        if self.combat_active:
-            # Slow motion breve
-            self.camera.set_slow_motion(0.3, 0.2)
-
-            # Shake intenso
-            self.camera.shake_camera(20, 0.3, 40)
-
-            # Flash rojo
-            self.camera.screen_flash((255, 0, 0), 150)
+        """Efecto para golpe crítico - DESACTIVADO"""
+        # No hacer nada - efectos de cámara desactivados
+        pass
 
     def unit_death(self, position: Tuple[float, float]):
-        """Efecto cuando muere una unidad"""
-        # Zoom breve en la muerte
-        self.camera.focus_on_point(position[0], position[1],
-                                  ZoomMode.DRAMATIC.value, 0.5)
-
-        # Shake moderado
-        self.camera.shake_camera(15, 0.5)
-
-        # Flash rojo oscuro
-        self.camera.screen_flash((100, 0, 0), 100)
-
-        # Añadir efecto de sangre temporal
-        self.camera.add_effect(ScreenEffect.BLOOD_OVERLAY)
-        pygame.time.set_timer(pygame.USEREVENT + 2, 2000)  # Remover después de 2 segundos
-
-        # ARREGLO: Resetear zoom automáticamente después de 1.5 segundos
-        pygame.time.set_timer(pygame.USEREVENT + 3, 1500)
+        """Efecto cuando muere una unidad - DESACTIVADO"""
+        # No hacer nada - efectos de cámara desactivados
+        pass
