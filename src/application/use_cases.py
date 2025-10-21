@@ -2,6 +2,7 @@
 Casos de uso de la aplicación
 """
 
+import logging
 from typing import List, Tuple, Optional
 from src.domain.batalla import Batalla
 from src.domain.events import EventoDominio
@@ -9,6 +10,9 @@ from src.domain.factories import FabricaEjercito
 from src.domain.strategies import IAAgresiva, IADefensiva, IATactica
 from src.domain.entities import Tablero
 from src.domain.value_objects import Posicion
+from src.domain.exceptions import ExcepcionDominio
+
+logger = logging.getLogger(__name__)
 
 
 class CasoUsoIniciarBatalla:
@@ -50,9 +54,12 @@ class CasoUsoSeleccionarUnidad:
         """Ejecuta el caso de uso"""
         try:
             return batalla.seleccionar_unidad(id_unidad)
-        except Exception as e:
-            print(f"Error seleccionando unidad: {e}")
+        except ExcepcionDominio as e:
+            logger.warning(f"Acción inválida al seleccionar unidad {id_unidad}: {e}")
             return []
+        except Exception as e:
+            logger.error(f"Error inesperado seleccionando unidad {id_unidad}: {e}", exc_info=True)
+            raise
 
 
 class CasoUsoMoverUnidad:
@@ -68,9 +75,12 @@ class CasoUsoMoverUnidad:
         try:
             posicion = Posicion(fila, columna)
             return batalla.mover_unidad_seleccionada(posicion)
-        except Exception as e:
-            print(f"Error moviendo unidad: {e}")
+        except ExcepcionDominio as e:
+            logger.warning(f"Movimiento inválido a ({fila}, {columna}): {e}")
             return []
+        except Exception as e:
+            logger.error(f"Error inesperado moviendo unidad a ({fila}, {columna}): {e}", exc_info=True)
+            raise
 
 
 class CasoUsoAtacarEnemigo:
@@ -84,9 +94,12 @@ class CasoUsoAtacarEnemigo:
         """Ejecuta el caso de uso"""
         try:
             return batalla.atacar_con_unidad_seleccionada(id_objetivo)
-        except Exception as e:
-            print(f"Error atacando: {e}")
+        except ExcepcionDominio as e:
+            logger.warning(f"Ataque inválido a {id_objetivo}: {e}")
             return []
+        except Exception as e:
+            logger.error(f"Error inesperado atacando a {id_objetivo}: {e}", exc_info=True)
+            raise
 
 
 class CasoUsoFinalizarTurno:
@@ -96,9 +109,12 @@ class CasoUsoFinalizarTurno:
         """Ejecuta el caso de uso"""
         try:
             return batalla.finalizar_turno_jugador()
-        except Exception as e:
-            print(f"Error finalizando turno: {e}")
+        except ExcepcionDominio as e:
+            logger.warning(f"No se puede finalizar turno: {e}")
             return []
+        except Exception as e:
+            logger.error(f"Error inesperado finalizando turno: {e}", exc_info=True)
+            raise
 
 
 class CasoUsoAplicarFormacion:
@@ -108,9 +124,12 @@ class CasoUsoAplicarFormacion:
         """Ejecuta el caso de uso"""
         try:
             return batalla.aplicar_formacion(formacion)
-        except Exception as e:
-            print(f"Error aplicando formación: {e}")
+        except ExcepcionDominio as e:
+            logger.warning(f"No se puede aplicar formación '{formacion}': {e}")
             return []
+        except Exception as e:
+            logger.error(f"Error inesperado aplicando formación '{formacion}': {e}", exc_info=True)
+            raise
 
 
 class CasoUsoObtenerEstadoBatalla:

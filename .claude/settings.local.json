@@ -10,7 +10,9 @@
       "Bash(if [ -f \"c:/Users/PC/victoria_chess/Victoria-chess/saves/campaign_progress.json\" ])",
       "Bash(then cat \"c:/Users/PC/victoria_chess/Victoria-chess/saves/campaign_progress.json\")",
       "Bash(else echo \"No save file found\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(find:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

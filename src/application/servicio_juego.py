@@ -2,6 +2,7 @@
 Servicio de aplicación que coordina los casos de uso
 """
 
+import logging
 from typing import List, Optional
 from src.domain.batalla import Batalla
 from src.domain.events import EventoDominio
@@ -15,6 +16,8 @@ from src.application.use_cases import (
     CasoUsoAplicarFormacion,
     CasoUsoObtenerEstadoBatalla
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ServicioJuego:
@@ -36,8 +39,10 @@ class ServicioJuego:
         # Validar dificultad
         dificultades_validas = ["facil", "normal", "dificil"]
         if dificultad not in dificultades_validas:
-            print(f"Dificultad '{dificultad}' no válida. Usando 'normal'")
+            logger.warning(f"Dificultad '{dificultad}' no válida. Usando 'normal'")
             dificultad = "normal"
+
+        logger.info(f"Iniciando batalla con dificultad: {dificultad}")
 
         self._batalla_actual, eventos = self._caso_iniciar.ejecutar(dificultad)
         self._eventos_procesados.extend(eventos)
