@@ -59,10 +59,15 @@ class CinematicCamera:
         self.rotation = 0.0
         self.target_rotation = 0.0
 
-        # Velocidades de interpolación - DESACTIVADAS (instant camera)
-        self.pan_speed = 999.0  # Movimiento instantáneo
-        self.zoom_speed = 999.0  # Zoom instantáneo
-        self.rotation_speed = 999.0  # Rotación instantánea
+        # Velocidades de interpolación
+        self.pan_speed = 5.0
+        self.zoom_speed = 3.0
+        self.rotation_speed = 2.0
+
+        # FLAGS para desactivar animaciones
+        self.enable_pan_animation = False  # DESACTIVADO - movimiento instantáneo
+        self.enable_zoom_animation = False  # DESACTIVADO - zoom instantáneo
+        self.enable_rotation_animation = False  # DESACTIVADO - rotación instantánea
 
         # Shake
         self.shake = CameraShake()
@@ -212,27 +217,40 @@ class CinematicCamera:
 
     def update(self, delta_time: float):
         """Actualiza la cámara"""
-        # Interpolar posición
-        if abs(self.x - self.target_x) > 0.1:
-            self.x += (self.target_x - self.x) * self.pan_speed * delta_time
-        else:
-            self.x = self.target_x
+        # Interpolar posición (o movimiento instantáneo)
+        if self.enable_pan_animation:
+            if abs(self.x - self.target_x) > 0.1:
+                self.x += (self.target_x - self.x) * self.pan_speed * delta_time
+            else:
+                self.x = self.target_x
 
-        if abs(self.y - self.target_y) > 0.1:
-            self.y += (self.target_y - self.y) * self.pan_speed * delta_time
+            if abs(self.y - self.target_y) > 0.1:
+                self.y += (self.target_y - self.y) * self.pan_speed * delta_time
+            else:
+                self.y = self.target_y
         else:
+            # Movimiento instantáneo
+            self.x = self.target_x
             self.y = self.target_y
 
-        # Interpolar zoom
-        if abs(self.zoom - self.target_zoom) > 0.01:
-            self.zoom += (self.target_zoom - self.zoom) * self.zoom_speed * delta_time
+        # Interpolar zoom (o zoom instantáneo)
+        if self.enable_zoom_animation:
+            if abs(self.zoom - self.target_zoom) > 0.01:
+                self.zoom += (self.target_zoom - self.zoom) * self.zoom_speed * delta_time
+            else:
+                self.zoom = self.target_zoom
         else:
+            # Zoom instantáneo
             self.zoom = self.target_zoom
 
-        # Interpolar rotación
-        if abs(self.rotation - self.target_rotation) > 0.01:
-            self.rotation += (self.target_rotation - self.rotation) * self.rotation_speed * delta_time
+        # Interpolar rotación (o rotación instantánea)
+        if self.enable_rotation_animation:
+            if abs(self.rotation - self.target_rotation) > 0.01:
+                self.rotation += (self.target_rotation - self.rotation) * self.rotation_speed * delta_time
+            else:
+                self.rotation = self.target_rotation
         else:
+            # Rotación instantánea
             self.rotation = self.target_rotation
 
         # Actualizar shake
@@ -282,8 +300,12 @@ class CinematicCamera:
         # Crear superficie temporal si hay transformaciones
         if self.zoom != 1.0 or self.rotation != 0 or self.shake.intensity > 0:
             # Calcular nuevo tamaño con zoom
-            new_width = int(self.screen_width * self.zoom)
-            new_height = int(self.screen_height * self.zoom)
+            new_width = max(1, min(10000, int(self.screen_width * self.zoom)))
+            new_height = max(1, min(10000, int(self.screen_height * self.zoom)))
+
+            # Validar dimensiones
+            if new_width <= 0 or new_height <= 0:
+                return screen
 
             # Crear superficie escalada
             scaled_surface = pygame.Surface((new_width, new_height))
