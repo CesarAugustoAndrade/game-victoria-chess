@@ -35,6 +35,7 @@ class BatallaState(State):
         self.ia_events_queue = []  # Cola de eventos de IA para mostrar uno a uno
         self.ia_event_timer = 0  # Timer para procesar eventos IA
         self.ia_event_delay = 0.8  # Segundos entre eventos IA (más lento para ver mejor)
+        self.processing_enemy_turn = False  # Flag para identificar eventos del turno enemigo
 
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
@@ -88,8 +89,10 @@ class BatallaState(State):
             elif event.key == pygame.K_SPACE:
                 # Finalizar turno
                 if batalla.turno_actual == TurnoActual.JUGADOR:
+                    self.processing_enemy_turn = True  # Marcar que vienen eventos del enemigo
                     eventos = self.servicio_juego.finalizar_turno()
                     self._procesar_eventos(eventos)
+                    self.processing_enemy_turn = False  # Reset después de procesar
 
             elif event.key == pygame.K_f:
                 # Cambiar formación
@@ -226,8 +229,8 @@ class BatallaState(State):
         eventos_normales = []
 
         for evento in eventos:
-            # Identificar eventos que vienen de acciones IA (durante turno enemigo)
-            if batalla.turno_actual == TurnoActual.ENEMIGO and isinstance(evento, (
+            # Identificar eventos que vienen de acciones IA usando el flag
+            if self.processing_enemy_turn and isinstance(evento, (
                 EventoAccionIA, EventoAtaqueRealizado, EventoUnidadMovida, EventoUnidadEliminada
             )):
                 eventos_ia.append(evento)
