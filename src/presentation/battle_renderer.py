@@ -466,6 +466,7 @@ class BattleRenderer:
 
     def _render_combat_effects(self, screen: pygame.Surface):
         """Renderiza efectos de combate épicos"""
+        # Efectos tradicionales
         for effect in self.combat_effects[:]:
             effect['duration'] -= 0.016
             if effect['duration'] > 0:
@@ -476,6 +477,10 @@ class BattleRenderer:
                     self._render_impact_effect(screen, effect)
             else:
                 self.combat_effects.remove(effect)
+
+        # Renderizar proyectiles
+        for projectile in self.animation_manager.projectile_animations:
+            projectile.render(screen)
 
 
     def _render_slash_effect(self, screen: pygame.Surface, effect: dict):
@@ -524,16 +529,14 @@ class BattleRenderer:
 
         # Efectos según tipo de atacante
         if attacker_type == TipoUnidad.SAGITTARII:
-            # Flecha volando con trayectoria animada
+            # Flecha animada con trayectoria realista
+            self.animation_manager.create_projectile(
+                ax, ay, tx, ty,
+                projectile_type="arrow",
+                duration=0.4
+            )
             ParticleEffects.create_arrow_trail(self.particle_system, ax, ay)
             self.sound_system.play_battle_sound("arrow_shot", (ax, ay))
-
-            # Animación de flecha
-            arrow_tween_x = Tween(ax, tx, 0.3, ease_type=EaseType.LINEAR)
-            arrow_tween_y = Tween(ay, ty - 30, 0.15, ease_type=EaseType.EASE_OUT)
-            arrow_tween_y2 = Tween(ty - 30, ty, 0.15, ease_type=EaseType.EASE_IN)
-            self.animation_manager.add_tween("arrow_x", arrow_tween_x)
-            self.animation_manager.add_tween("arrow_y", arrow_tween_y)
 
         elif attacker_type == TipoUnidad.EQUITES:
             # Carga de caballería épica

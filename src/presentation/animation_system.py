@@ -238,6 +238,7 @@ class AnimationManager:
         self.sequences: Dict[str, AnimationSequence] = {}
         self.sprite_animations: Dict[str, 'SpriteAnimation'] = {}
         self.particles_animations: List['ParticleAnimation'] = []
+        self.projectile_animations: List['ProjectileAnimation'] = []
 
     def add_tween(self, name: str, tween: Tween) -> None:
         """Añade un tween al gestor"""
@@ -301,6 +302,14 @@ class AnimationManager:
         self.particles_animations = [p for p in self.particles_animations
                                      if not p.update(delta_time)]
 
+        # Actualizar animaciones de proyectiles
+        active_projectiles = []
+        for projectile in self.projectile_animations:
+            projectile.update(delta_time)
+            if not projectile.is_complete:
+                active_projectiles.append(projectile)
+        self.projectile_animations = active_projectiles
+
     # ========== ANIMACIONES PREDEFINIDAS ==========
 
     def create_move_animation(self, start_pos: Tuple[int, int],
@@ -353,6 +362,18 @@ class AnimationManager:
                            duration: float = 0.1) -> 'ScreenFlash':
         """Crea flash de pantalla"""
         return ScreenFlash(color, duration)
+
+    def create_projectile(self, start_x: float, start_y: float,
+                         end_x: float, end_y: float,
+                         projectile_type: str = "arrow",
+                         duration: float = 0.3) -> 'ProjectileAnimation':
+        """Crea animación de proyectil"""
+        projectile = ProjectileAnimation(
+            start_x, start_y, end_x, end_y,
+            duration, projectile_type
+        )
+        self.projectile_animations.append(projectile)
+        return projectile
 
 
 @dataclass
@@ -562,6 +583,119 @@ class ScreenFlash:
         color = (*self.color[:3], self.alpha)
         flash_surface.fill(color)
         screen.blit(flash_surface, (0, 0))
+
+
+@dataclass
+class ProjectileAnimation:
+    """Animación de proyectil (flechas, lanzas, etc)"""
+    start_x: float
+    start_y: float
+    end_x: float
+    end_y: float
+    duration: float
+    projectile_type: str = "arrow"  # "arrow", "spear", "stone"
+    elapsed: float = 0.0
+
+    # Colores por tipo
+    COLORS = {
+        "arrow": (139, 69, 19),      # Marrón para flechas
+        "spear": (150, 150, 150),    # Gris para lanzas
+        "stone": (100, 100, 100),    # Gris oscuro para piedras
+    }
+
+    @property
+    def is_complete(self) -> bool:
+        return self.elapsed >= self.duration
+
+    @property
+    def progress(self) -> float:
+        if self.duration <= 0:
+            return 1.0
+        return min(1.0, self.elapsed / self.duration)
+
+    @property
+    def current_position(self) -> Tuple[float, float]:
+        """Calcula la posición actual del proyectil con arco"""
+        t = self.progress
+
+        # Interpolación lineal para X e Y
+        x = self.start_x + (self.end_x - self.start_x) * t
+        y = self.start_y + (self.end_y - self.start_y) * t
+
+        # Añadir arco parabólico para proyectiles
+        if self.projectile_type in ["arrow", "spear"]:
+            # Altura del arco (más alto para distancias mayores)
+            distance = math.sqrt((self.end_x - self.start_x)**2 + (self.end_y - self.start_y)**2)
+            arc_height = distance * 0.15  # 15% de la distancia
+
+            # Parábola: máximo en t=0.5
+            arc_offset = 4 * arc_height * t * (1 - t)
+            y -= arc_offset
+
+        return (x, y)
+
+    @property
+    def rotation(self) -> float:
+        """Calcula la rotación del proyectil basada en su dirección"""
+        # Calcular el ángulo de la trayectoria
+        dx = self.end_x - self.start_x
+        dy = self.end_y - self.start_y
+
+        # Ángulo en grados (pygame usa grados)
+        angle = math.degrees(math.atan2(dy, dx))
+
+        return -angle  # Negativo porque pygame rota en sentido horario
+
+    def update(self, delta_time: float) -> None:
+        """Actualiza el proyectil"""
+        self.elapsed += delta_time
+
+    def render(self, screen: pygame.Surface) -> None:
+        """Renderiza el proyectil"""
+        if self.is_complete:
+            return
+
+        x, y = self.current_position
+        color = self.COLORS.get(self.projectile_type, self.COLORS["arrow"])
+
+        if self.projectile_type == "arrow":
+            # Dibujar flecha (línea con punta)
+            length = 15
+            angle_rad = math.radians(self.rotation)
+
+            # Punta de la flecha
+            tip_x = x + math.cos(angle_rad) * length
+            tip_y = y - math.sin(angle_rad) * length
+
+            # Dibujar línea principal
+            pygame.draw.line(screen, color, (int(x), int(y)), (int(tip_x), int(tip_y)), 2)
+
+            # Dibujar punta triangular
+            tip_size = 5
+            left_x = tip_x + math.cos(angle_rad + 2.8) * tip_size
+            left_y = tip_y - math.sin(angle_rad + 2.8) * tip_size
+            right_x = tip_x + math.cos(angle_rad - 2.8) * tip_size
+            right_y = tip_y - math.sin(angle_rad - 2.8) * tip_size
+
+            pygame.draw.polygon(screen, color, [
+                (int(tip_x), int(tip_y)),
+                (int(left_x), int(left_y)),
+                (int(right_x), int(right_y))
+            ])
+
+        elif self.projectile_type == "spear":
+            # Dibujar lanza (línea más larga)
+            length = 20
+            angle_rad = math.radians(self.rotation)
+
+            tip_x = x + math.cos(angle_rad) * length
+            tip_y = y - math.sin(angle_rad) * length
+
+            pygame.draw.line(screen, color, (int(x), int(y)), (int(tip_x), int(tip_y)), 3)
+
+        elif self.projectile_type == "stone":
+            # Dibujar piedra (círculo simple)
+            pygame.draw.circle(screen, color, (int(x), int(y)), 4)
 
 
 class CameraController:
