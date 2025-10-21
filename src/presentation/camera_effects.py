@@ -59,10 +59,10 @@ class CinematicCamera:
         self.rotation = 0.0
         self.target_rotation = 0.0
 
-        # Velocidades de interpolación
-        self.pan_speed = 5.0
-        self.zoom_speed = 3.0
-        self.rotation_speed = 2.0
+        # Velocidades de interpolación - DESACTIVADAS (instant camera)
+        self.pan_speed = 999.0  # Movimiento instantáneo
+        self.zoom_speed = 999.0  # Zoom instantáneo
+        self.rotation_speed = 999.0  # Rotación instantánea
 
         # Shake
         self.shake = CameraShake()
@@ -413,7 +413,7 @@ class CombatZoomController:
         self.camera = camera
         self.combat_active = False
         self.zoom_level = ZoomMode.NORMAL
-        self.auto_zoom_enabled = True
+        self.auto_zoom_enabled = False  # DESACTIVADO - No zoom automático en combate
         self.combat_timer = 0.0
         self.combat_duration = 1.0  # Segundos antes de retornar a normal
 
