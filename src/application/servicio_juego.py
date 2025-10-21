@@ -165,3 +165,29 @@ class ServicioJuego:
         """Valida que exista una batalla activa"""
         if self._batalla_actual is None:
             raise ExcepcionEstadoInvalido("No hay batalla activa")
+
+    def cambiar_turno_a_enemigo(self):
+        """Cambia el turno a enemigo sin ejecutar IA"""
+        from src.domain.value_objects import TurnoActual
+        self._validar_batalla_activa()
+        self._batalla_actual._turno_actual = TurnoActual.ENEMIGO
+        self._batalla_actual._unidad_seleccionada = None
+
+    def cambiar_turno_a_jugador(self):
+        """Cambia el turno a jugador"""
+        from src.domain.value_objects import TurnoActual
+        self._validar_batalla_activa()
+        # Remover unidades muertas
+        self._batalla_actual._ejercito_enemigo.remover_unidades_muertas()
+        self._batalla_actual._ejercito_jugador.remover_unidades_muertas()
+
+        # Verificar si el jugador fue derrotado
+        if self._batalla_actual._ejercito_jugador.esta_derrotado:
+            from src.domain.value_objects import Bando
+            self._batalla_actual._finalizar_batalla(Bando.BARBAROS)
+        elif self._batalla_actual._ejercito_enemigo.esta_derrotado:
+            from src.domain.value_objects import Bando
+            self._batalla_actual._finalizar_batalla(Bando.ROMA)
+        else:
+            # Iniciar nuevo turno del jugador
+            self._batalla_actual._iniciar_nuevo_turno_jugador()

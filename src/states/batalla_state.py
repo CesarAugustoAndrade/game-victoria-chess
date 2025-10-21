@@ -31,15 +31,13 @@ class BatallaState(State):
         self.auto_play_timer = 0  # Timer para retraso entre acciones
         self.auto_play_delay = 0.5  # Segundos entre acciones de IA
 
-        # ===== SISTEMA DE COLA DE EVENTOS IA =====
-        self.ia_events_queue = []  # Cola de eventos de IA para mostrar uno a uno
-        self.ia_event_timer = 0  # Timer para procesar eventos IA
-        self.ia_event_delay = 0.8  # Segundos entre eventos IA (más lento para ver mejor)
-        self.processing_enemy_turn = False  # Flag para identificar eventos del turno enemigo
-
         # ===== SISTEMA DE BLOQUEO/SINCRONIZACIÓN =====
-        self.processing_state = "READY"  # Estados: READY, PROCESSING_ENEMY_TURN, ANIMATING
-        self.total_ia_events = 0  # Para mostrar progreso
+        self.processing_state = "READY"  # Estados: READY, PROCESSING_ENEMY_TURN
+
+        # ===== NUEVO SISTEMA DE TURNO ENEMIGO PASO A PASO =====
+        self.enemy_turn_active = False  # Si el turno enemigo está activo
+        self.enemy_turn_timer = 0  # Timer para acciones enemigas
+        self.enemy_turn_delay = 0.8  # Delay entre acciones enemigas (más lento para ver mejor)
 
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
@@ -104,22 +102,17 @@ class BatallaState(State):
                     self.game.change_state(MenuState(self.game))
 
             elif event.key == pygame.K_SPACE:
-                # Finalizar turno
+                # Finalizar turno del jugador y activar turno enemigo
                 if batalla.turno_actual == TurnoActual.JUGADOR:
+                    # Cambiar turno en el dominio
+                    self.servicio_juego.cambiar_turno_a_enemigo()
+
+                    # Activar sistema de turno enemigo paso a paso
+                    self.enemy_turn_active = True
+                    self.enemy_turn_timer = 0
                     self.processing_state = "PROCESSING_ENEMY_TURN"  # Bloquear input
-                    self.processing_enemy_turn = True  # Marcar que vienen eventos del enemigo
 
-                    eventos = self.servicio_juego.finalizar_turno()
-                    self._procesar_eventos(eventos)
-
-                    self.processing_enemy_turn = False  # Reset después de procesar
-
-                    # Si hay eventos en cola, cambiar a ANIMATING, si no, volver a READY
-                    if self.ia_events_queue:
-                        self.processing_state = "ANIMATING"
-                        self.total_ia_events = len(self.ia_events_queue)
-                    else:
-                        self.processing_state = "READY"
+                    self._mostrar_mensaje("Turno Enemigo...")
 
             elif event.key == pygame.K_f:
                 # Cambiar formación
@@ -251,21 +244,8 @@ class BatallaState(State):
         if not batalla:
             return
 
-        # Separar eventos de IA para procesarlos uno a uno
-        eventos_ia = []
-        eventos_normales = []
-
+        # Procesar todos los eventos inmediatamente
         for evento in eventos:
-            # Identificar eventos que vienen de acciones IA usando el flag
-            if self.processing_enemy_turn and isinstance(evento, (
-                EventoAccionIA, EventoAtaqueRealizado, EventoUnidadMovida, EventoUnidadEliminada
-            )):
-                eventos_ia.append(evento)
-            else:
-                eventos_normales.append(evento)
-
-        # Procesar eventos normales inmediatamente
-        for evento in eventos_normales:
             # Mostrar mensajes según el tipo de evento
             if isinstance(evento, EventoBatallaIniciada):
                 self._mostrar_mensaje(evento.mensaje)
@@ -356,66 +336,6 @@ class BatallaState(State):
                 import random
                 self.renderer.screen_shake = 3
 
-        # Encolar eventos de IA para procesamiento secuencial
-        if eventos_ia:
-            self.ia_events_queue.extend(eventos_ia)
-            self.ia_event_timer = 0  # Reset timer para empezar inmediatamente
-
-    def _procesar_evento_ia(self, evento):
-        """Procesa un solo evento de IA con efectos visuales"""
-        batalla = self.servicio_juego.obtener_batalla_actual()
-        if not batalla:
-            return
-
-        if isinstance(evento, EventoAccionIA):
-            # Mostrar mensaje de acción IA
-            self._mostrar_mensaje(f"[IA] {evento.descripcion}")
-
-        elif isinstance(evento, EventoAtaqueRealizado):
-            # Mostrar grito de guerra
-            if evento.grito_guerra:
-                self._mostrar_mensaje(evento.grito_guerra)
-
-            # Buscar las unidades para obtener sus posiciones
-            atacante = None
-            defensor = None
-
-            for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
-                if unidad.id == evento.resultado.atacante_id:
-                    atacante = unidad
-                if unidad.id == evento.resultado.defensor_id:
-                    defensor = unidad
-
-            if atacante and defensor:
-                self.renderer.trigger_attack_effect(
-                    atacante.posicion,
-                    defensor.posicion,
-                    atacante.tipo,
-                    evento.resultado.danio_infligido
-                )
-
-        elif isinstance(evento, EventoUnidadMovida):
-            # Efectos de movimiento
-            unidad_movida = None
-            for unidad in batalla.ejercito_jugador.unidades_vivas + batalla.ejercito_enemigo.unidades_vivas:
-                if unidad.id == evento.unidad_id:
-                    unidad_movida = unidad
-                    break
-
-            if unidad_movida:
-                self.renderer.trigger_unit_move(evento.posicion_destino, unidad_movida.tipo)
-
-        elif isinstance(evento, EventoUnidadEliminada):
-            # Mostrar mensaje de eliminación
-            self._mostrar_mensaje(evento.mensaje)
-
-            # Efectos de muerte épicos
-            for ejercito in [batalla.ejercito_jugador, batalla.ejercito_enemigo]:
-                for unidad in ejercito._unidades:  # Incluir muertas
-                    if unidad.id == evento.unidad_id:
-                        self.renderer.trigger_unit_death(unidad.posicion, unidad.tipo)
-                        break
-
     def _actualizar_highlights(self):
         """Actualiza las casillas resaltadas"""
         batalla = self.servicio_juego.obtener_batalla_actual()
@@ -438,19 +358,14 @@ class BatallaState(State):
             self.mensaje_actual = ""
             self.tiempo_mensaje = 0
 
-        # ===== SISTEMA DE PROCESAMIENTO DE EVENTOS IA =====
-        if self.ia_events_queue:
-            self.ia_event_timer += dt
+        # ===== NUEVO SISTEMA DE TURNO ENEMIGO PASO A PASO =====
+        if self.enemy_turn_active:
+            self.enemy_turn_timer += dt
 
-            # Procesar siguiente evento cuando pase el delay
-            if self.ia_event_timer >= self.ia_event_delay:
-                evento = self.ia_events_queue.pop(0)  # Sacar el primer evento
-                self._procesar_evento_ia(evento)  # Procesar individualmente
-                self.ia_event_timer = 0  # Reset timer
-
-                # Cuando se vacía la cola, volver a READY
-                if not self.ia_events_queue:
-                    self.processing_state = "READY"
+            # Ejecutar siguiente acción enemiga cuando pase el delay
+            if self.enemy_turn_timer >= self.enemy_turn_delay:
+                self._ejecutar_ia_enemigo()
+                self.enemy_turn_timer = 0  # Reset timer
 
         # ===== SISTEMA DE AUTO-PLAY =====
         elif self.auto_play_enabled and self.processing_state == "READY":
@@ -506,15 +421,8 @@ class BatallaState(State):
         overlay.fill((0, 0, 0))
         screen.blit(overlay, (0, 0))
 
-        # Determinar texto según estado
-        if self.processing_state == "PROCESSING_ENEMY_TURN":
-            text = "Calculando turno enemigo..."
-        elif self.processing_state == "ANIMATING":
-            # Mostrar progreso
-            eventos_procesados = self.total_ia_events - len(self.ia_events_queue)
-            text = f"Turno Enemigo: Acción {eventos_procesados}/{self.total_ia_events}"
-        else:
-            text = "Procesando..."
+        # Texto simple para turno enemigo
+        text = "Turno Enemigo en progreso..."
 
         # Renderizar texto principal
         font = pygame.font.Font(None, 48)
@@ -528,22 +436,6 @@ class BatallaState(State):
         pygame.draw.rect(screen, (200, 50, 50), bg_rect, 3)
 
         screen.blit(text_surface, text_rect)
-
-        # Barra de progreso si está animando
-        if self.processing_state == "ANIMATING" and self.total_ia_events > 0:
-            # Calcular progreso
-            progress = (self.total_ia_events - len(self.ia_events_queue)) / self.total_ia_events
-
-            # Dimensiones de la barra
-            bar_width = 400
-            bar_height = 20
-            bar_x = (screen.get_width() - bar_width) // 2
-            bar_y = text_rect.bottom + 20
-
-            # Dibujar barra de progreso
-            pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(screen, (0, 200, 0), (bar_x, bar_y, int(bar_width * progress), bar_height))
-            pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
 
         # Instrucción
         font_small = pygame.font.Font(None, 24)
@@ -675,20 +567,126 @@ class BatallaState(State):
         # Si llegamos aquí, ninguna unidad puede actuar -> finalizar turno
         print("[AUTO-PLAY] No hay más acciones, finalizando turno...")
 
-        # Cambiar estado a procesando turno enemigo
+        # Cambiar turno a enemigo y activar sistema de turno enemigo
+        self.servicio_juego.cambiar_turno_a_enemigo()
+
+        # Activar sistema de turno enemigo paso a paso
+        self.enemy_turn_active = True
+        self.enemy_turn_timer = 0
         self.processing_state = "PROCESSING_ENEMY_TURN"
-        self.processing_enemy_turn = True
 
-        eventos = self.servicio_juego.finalizar_turno()
-        self._procesar_eventos(eventos)
+        self._mostrar_mensaje("Turno Enemigo...")
 
-        self.processing_enemy_turn = False
+        self._actualizar_highlights()
 
-        # Si hay eventos en cola, cambiar a ANIMATING
-        if self.ia_events_queue:
-            self.processing_state = "ANIMATING"
-            self.total_ia_events = len(self.ia_events_queue)
-        else:
-            self.processing_state = "READY"
+    def _ejecutar_ia_enemigo(self):
+        """Ejecuta UNA acción de IA enemiga (igual que el jugador: una acción a la vez)"""
+        from src.domain.services import CalculadorPrioridad, CalculadorCombate, CalculadorMovimiento
 
+        batalla = self.servicio_juego.obtener_batalla_actual()
+        if not batalla:
+            return
+
+        # Buscar la primera unidad enemiga que pueda actuar
+        unidades_disponibles = [u for u in batalla.ejercito_enemigo.unidades_vivas
+                               if not u.esta_en_panico]
+
+        # Ordenar por agresividad (igual que IAAgresiva)
+        def agresividad(unidad):
+            if unidad.tipo.value == "equites" or unidad.tipo.value == "caballeria_barbara":
+                return 3
+            elif unidad.tipo.value == "sagittarii" or unidad.tipo.value == "escaramuzadores":
+                return 2
+            else:
+                return 1
+
+        unidades_disponibles.sort(key=agresividad, reverse=True)
+
+        # Buscar primera unidad que pueda hacer algo
+        for unidad in unidades_disponibles:
+            eventos = []
+
+            # Prioridad 1: Atacar si puede
+            if unidad.puede_actuar:
+                objetivos = unidad.obtener_objetivos_atacables(
+                    batalla.ejercito_jugador.unidades_vivas
+                )
+
+                if objetivos:
+                    mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
+                        unidad, objetivos
+                    )
+
+                    if mejor_objetivo:
+                        self._mostrar_mensaje(f"{unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}")
+
+                        resultado = CalculadorCombate.ejecutar_ataque(unidad, mejor_objetivo)
+                        eventos.append(EventoAtaqueRealizado(
+                            resultado,
+                            grito_guerra=unidad.visualizacion.grito_guerra
+                        ))
+
+                        if resultado.objetivo_eliminado:
+                            eventos.append(EventoUnidadEliminada(
+                                mejor_objetivo.id,
+                                mejor_objetivo.bando,
+                                mejor_objetivo.tipo.value,
+                                f"¡{mejor_objetivo.visualizacion.nombre} ha caído!"
+                            ))
+
+                        # Verificar si el jugador fue derrotado
+                        if batalla.ejercito_jugador.esta_derrotado:
+                            from src.domain.events import EventoBatallaTerminada
+                            from src.domain.value_objects import Bando
+                            mensaje = "¡DERROTA! Los bárbaros han vencido..."
+                            eventos.append(EventoBatallaTerminada(
+                                Bando.BARBAROS,
+                                len(batalla.ejercito_enemigo.unidades_vivas),
+                                mensaje
+                            ))
+                            batalla._batalla_terminada = True
+                            batalla._ganador = Bando.BARBAROS
+
+                        # Procesar eventos y retornar (solo una acción)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                        return
+
+            # Prioridad 2: Moverse si puede
+            if unidad.puede_moverse:
+                movimientos = unidad.obtener_posiciones_movimiento_validas(batalla.tablero)
+
+                if movimientos:
+                    mejor_movimiento = CalculadorMovimiento.seleccionar_mejor_movimiento(
+                        unidad, movimientos, batalla.ejercito_jugador.unidades_vivas
+                    )
+
+                    if mejor_movimiento:
+                        self._mostrar_mensaje(f"{unidad.visualizacion.nombre} avanza")
+
+                        posicion_origen = unidad.posicion
+                        unidad.mover_a(mejor_movimiento)
+
+                        eventos.append(EventoUnidadMovida(
+                            unidad.id,
+                            posicion_origen,
+                            mejor_movimiento
+                        ))
+
+                        # Procesar eventos y retornar (solo una acción)
+                        self._procesar_eventos(eventos)
+                        self._actualizar_highlights()
+                        return
+
+        # Si llegamos aquí, ninguna unidad enemiga puede actuar -> finalizar turno enemigo
+        print("[IA ENEMIGA] No hay más acciones, volviendo a turno jugador...")
+
+        # Cambiar turno de vuelta al jugador
+        self.servicio_juego.cambiar_turno_a_jugador()
+
+        # Restaurar estado READY
+        self.enemy_turn_active = False
+        self.processing_state = "READY"
+
+        self._mostrar_mensaje("Tu turno")
         self._actualizar_highlights()
