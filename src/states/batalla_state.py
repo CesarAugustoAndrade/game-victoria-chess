@@ -331,6 +331,9 @@ class BatallaState(State):
 
         # Encolar eventos de IA para procesamiento secuencial
         if eventos_ia:
+            print(f"[DEBUG] Encolando {len(eventos_ia)} eventos IA. Flag processing_enemy_turn: {self.processing_enemy_turn}")
+            for evt in eventos_ia[:3]:  # Solo mostrar primeros 3 para no saturar
+                print(f"  - {type(evt).__name__}")
             self.ia_events_queue.extend(eventos_ia)
             self.ia_event_timer = 0  # Reset timer para empezar inmediatamente
 
@@ -342,7 +345,7 @@ class BatallaState(State):
 
         if isinstance(evento, EventoAccionIA):
             # Mostrar mensaje de acción IA
-            self._mostrar_mensaje(f"[IA] {evento.mensaje}")
+            self._mostrar_mensaje(f"[IA] {evento.descripcion}")
 
         elif isinstance(evento, EventoAtaqueRealizado):
             # Mostrar grito de guerra
@@ -418,6 +421,7 @@ class BatallaState(State):
             # Procesar siguiente evento cuando pase el delay
             if self.ia_event_timer >= self.ia_event_delay:
                 evento = self.ia_events_queue.pop(0)  # Sacar el primer evento
+                print(f"[DEBUG] Procesando evento IA: {type(evento).__name__}, quedan {len(self.ia_events_queue)}")
                 self._procesar_evento_ia(evento)  # Procesar individualmente
                 self.ia_event_timer = 0  # Reset timer
 
