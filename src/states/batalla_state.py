@@ -31,6 +31,11 @@ class BatallaState(State):
         self.auto_play_timer = 0  # Timer para retraso entre acciones
         self.auto_play_delay = 0.5  # Segundos entre acciones de IA
 
+        # ===== SISTEMA DE COLA DE EVENTOS IA =====
+        self.ia_events_queue = []  # Cola de eventos de IA para mostrar uno a uno
+        self.ia_event_timer = 0  # Timer para procesar eventos IA
+        self.ia_event_delay = 0.8  # Segundos entre eventos IA (más lento para ver mejor)
+
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
         if self.nivel:
@@ -216,7 +221,19 @@ class BatallaState(State):
         if not batalla:
             return
 
+        # Separar eventos de IA para procesarlos uno a uno
+        eventos_ia = []
+        eventos_normales = []
+
         for evento in eventos:
+            # Identificar eventos que vienen de acciones IA
+            if isinstance(evento, (EventoAtaqueRealizado, EventoUnidadMovida)) and batalla.turno_actual == TurnoActual.ENEMIGO:
+                eventos_ia.append(evento)
+            else:
+                eventos_normales.append(evento)
+
+        # Procesar eventos normales inmediatamente
+        for evento in eventos_normales:
             # Mostrar mensajes según el tipo de evento
             if isinstance(evento, EventoBatallaIniciada):
                 self._mostrar_mensaje(evento.mensaje)
