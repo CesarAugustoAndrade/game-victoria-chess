@@ -389,10 +389,6 @@ class BatallaState(State):
         if self.mensaje_actual:
             self._render_mensaje(screen)
 
-        # Renderizar indicador de procesamiento
-        if self.processing_state != "READY":
-            self._render_processing_indicator(screen)
-
     def _render_mensaje(self, screen):
         """Renderiza un mensaje en pantalla"""
         font = pygame.font.Font(None, 36)
@@ -412,37 +408,6 @@ class BatallaState(State):
             info_font = pygame.font.Font(None, 20)
             tutorial_text = info_font.render("Presiona T para más consejos", True, (100, 200, 255))
             screen.blit(tutorial_text, (screen.get_width() - 250, screen.get_height() - 30))
-
-    def _render_processing_indicator(self, screen):
-        """Renderiza indicador de procesamiento del turno enemigo"""
-        # Overlay semi-transparente
-        overlay = pygame.Surface(screen.get_size())
-        overlay.set_alpha(100)
-        overlay.fill((0, 0, 0))
-        screen.blit(overlay, (0, 0))
-
-        # Texto simple para turno enemigo
-        text = "Turno Enemigo en progreso..."
-
-        # Renderizar texto principal
-        font = pygame.font.Font(None, 48)
-        text_surface = font.render(text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=(screen.get_width()//2, screen.get_height()//2))
-
-        # Fondo para el texto
-        padding = 20
-        bg_rect = text_rect.inflate(padding * 2, padding)
-        pygame.draw.rect(screen, (50, 0, 0), bg_rect)
-        pygame.draw.rect(screen, (200, 50, 50), bg_rect, 3)
-
-        screen.blit(text_surface, text_rect)
-
-        # Instrucción
-        font_small = pygame.font.Font(None, 24)
-        inst_text = "Por favor espere..."
-        inst_surface = font_small.render(inst_text, True, (200, 200, 200))
-        inst_rect = inst_surface.get_rect(center=(screen.get_width()//2, screen.get_height()//2 + 80))
-        screen.blit(inst_surface, inst_rect)
 
     def _mostrar_tutorial(self):
         """Muestra mensajes de tutorial secuencialmente"""
