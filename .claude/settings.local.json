@@ -12,7 +12,8 @@
       "Bash(else echo \"No save file found\")",
       "Bash(fi)",
       "Bash(find:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

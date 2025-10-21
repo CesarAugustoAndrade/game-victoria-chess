@@ -8,6 +8,26 @@ from src.domain.entities import Unidad, Ejercito
 from src.domain.value_objects import (
     TipoUnidad, Posicion, ResultadoAtaque
 )
+from src.domain.constants import (
+    VARIANZA_DANIO_MIN, VARIANZA_DANIO_MAX, DANIO_MINIMO,
+    MORAL_PERDIDA_MAX_POR_DANIO, UMBRAL_VIDA_CRITICA, UMBRAL_VIDA_HERIDO,
+    PRIORIDAD_CASI_MUERTO, PRIORIDAD_HERIDO, PRIORIDAD_SAGITTARII,
+    PRIORIDAD_EQUITES, PRIORIDAD_HASTATI, PRIORIDAD_LEGIONARIO,
+    PRIORIDAD_TRIARII, PRIORIDAD_GENERICA, PRIORIDAD_UNIDAD_PANICO,
+    MAX_ATACANTES_FOCUS_FIRE, PRIORIDAD_ELIMINACION_GARANTIZADA,
+    PRIORIDAD_AMENAZA_CRITICA, BONUS_FORMACION_CUNEUS_ATAQUE,
+    BONUS_FORMACION_TESTUDO_ATAQUE, AMENAZA_PUEDE_MATAR,
+    AMENAZA_HERIDA_GRAVE, UMBRAL_AMENAZA_LETAL, DISTANCIA_COHESION_ALIADOS,
+    PESO_ALIADOS_CERCANOS, PESO_OPORTUNIDAD_ATAQUE, PESO_FLANQUEO,
+    PESO_RODEADO_PENALIZACION, PESO_INFANTERIA_DELANTE, PESO_DISTANCIA_SEGURA,
+    PESO_ESPACIOS_LIBRES, PESO_LINEA_FRONTAL, RANGO_FLANQUEO_LATERAL,
+    BALANCE_SUPERIORIDAD_NUMERICA, BALANCE_INFERIORIDAD_NUMERICA,
+    UMBRAL_MORAL_BAJA, UMBRAL_MORAL_ALTA, HISTORIAL_DANIO_ALTO,
+    MORAL_RESTAURACION_TESTUDO, MORAL_RESTAURACION_CUNEUS,
+    MORAL_RESTAURACION_ORBIS, BONUS_FORMACION_CUNEUS_DEFENSA,
+    BONUS_FORMACION_TESTUDO_DEFENSA, BONUS_FORMACION_ORBIS_ATAQUE,
+    BONUS_FORMACION_ORBIS_DEFENSA, DISTANCIA_RETAGUARDIA_SEGURA
+)
 
 
 class CalculadorCombate:
@@ -16,7 +36,7 @@ class CalculadorCombate:
     @staticmethod
     def calcular_danio(atacante: Unidad, defensor: Unidad) -> int:
         """Calcula el daño de un ataque con varianza aleatoria"""
-        varianza = random.uniform(-5, 5)
+        varianza = random.uniform(VARIANZA_DANIO_MIN, VARIANZA_DANIO_MAX)
         return atacante.calcular_danio_contra(defensor, varianza)
 
     @staticmethod
@@ -29,7 +49,7 @@ class CalculadorCombate:
         atacante.marcar_como_actuada()
 
         # Calcular pérdida de moral
-        moral_perdida = min(15, danio)  # Más daño = más pérdida de moral
+        moral_perdida = min(MORAL_PERDIDA_MAX_POR_DANIO, danio)  # Más daño = más pérdida de moral
 
         return ResultadoAtaque(
             atacante_id=atacante.id,
@@ -61,20 +81,20 @@ class CalculadorPrioridad:
 
         # 1. Priorizar unidades con poca vida (rematar)
         porcentaje_vida = objetivo.porcentaje_vida
-        if porcentaje_vida < 0.3:
-            prioridad += 100  # Casi muertos = máxima prioridad
-        elif porcentaje_vida < 0.5:
-            prioridad += 50   # Heridos = alta prioridad
+        if porcentaje_vida < UMBRAL_VIDA_CRITICA:
+            prioridad += PRIORIDAD_CASI_MUERTO  # Casi muertos = máxima prioridad
+        elif porcentaje_vida < UMBRAL_VIDA_HERIDO:
+            prioridad += PRIORIDAD_HERIDO   # Heridos = alta prioridad
 
         # 2. Priorizar unidades de alto valor
         prioridades_tipo = {
-            TipoUnidad.SAGITTARII: 45,     # Arqueros son peligrosos
-            TipoUnidad.EQUITES: 40,         # Caballería es valiosa
-            TipoUnidad.HASTATI: 30,         # Infantería pesada
-            TipoUnidad.LEGIONARIO: 20,      # Infantería básica
-            TipoUnidad.TRIARII: 25          # Piqueros
+            TipoUnidad.SAGITTARII: PRIORIDAD_SAGITTARII,     # Arqueros son peligrosos
+            TipoUnidad.EQUITES: PRIORIDAD_EQUITES,         # Caballería es valiosa
+            TipoUnidad.HASTATI: PRIORIDAD_HASTATI,         # Infantería pesada
+            TipoUnidad.LEGIONARIO: PRIORIDAD_LEGIONARIO,      # Infantería básica
+            TipoUnidad.TRIARII: PRIORIDAD_TRIARII          # Piqueros
         }
-        prioridad += prioridades_tipo.get(objetivo.tipo, 15)
+        prioridad += prioridades_tipo.get(objetivo.tipo, PRIORIDAD_GENERICA)
 
         # 3. Bonus táctico: Triarii priorizan caballería
         if atacante.tipo == TipoUnidad.TRIARII and objetivo.tipo == TipoUnidad.EQUITES:
@@ -90,7 +110,7 @@ class CalculadorPrioridad:
 
         # 6. Priorizar unidades en pánico
         if objetivo.esta_en_panico:
-            prioridad += 30
+            prioridad += PRIORIDAD_UNIDAD_PANICO
 
         return prioridad
 
@@ -266,7 +286,7 @@ class SistemaFocusFire:
             # Calcular daño total posible
             danio_total = sum(
                 a.calcular_danio_contra(enemigo, 0)
-                for a in atacantes_alcance[:3]  # Max 3 unidades
+                for a in atacantes_alcance[:MAX_ATACANTES_FOCUS_FIRE]
             )
 
             # Prioridad para focus fire
@@ -274,11 +294,11 @@ class SistemaFocusFire:
 
             # Máxima prioridad si podemos eliminar
             if danio_total >= enemigo.vida_actual:
-                prioridad += 1000
+                prioridad += PRIORIDAD_ELIMINACION_GARANTIZADA
 
             # Alta prioridad para unidades casi muertas
-            if enemigo.porcentaje_vida < 0.3:
-                prioridad += 200
+            if enemigo.porcentaje_vida < UMBRAL_VIDA_CRITICA:
+                prioridad += PRIORIDAD_AMENAZA_CRITICA
 
             # Prioridad por tipo de unidad
             prioridades_tipo = {
@@ -295,7 +315,7 @@ class SistemaFocusFire:
             mejores_opciones.append((
                 prioridad,
                 enemigo,
-                atacantes_alcance[:3]  # Limitar a 3 atacantes
+                atacantes_alcance[:MAX_ATACANTES_FOCUS_FIRE]
             ))
 
         if not mejores_opciones:
@@ -334,10 +354,10 @@ class EvaluadorAmenazas:
 
                 # CRÍTICO: puede matarme
                 if danio_potencial >= mi_unidad.vida_actual:
-                    amenaza += 500
+                    amenaza += AMENAZA_PUEDE_MATAR
                 # ALTO: puede herirme gravemente
-                elif danio_potencial >= mi_unidad.vida_actual * 0.5:
-                    amenaza += 200
+                elif danio_potencial >= mi_unidad.vida_actual * UMBRAL_VIDA_HERIDO:
+                    amenaza += AMENAZA_HERIDA_GRAVE
                 else:
                     amenaza += danio_potencial
 
@@ -391,10 +411,10 @@ class CalculadorPosicionTactica:
         # 1. Mantener cohesión con aliados (formación)
         aliados_cercanos = sum(
             1 for a in aliados
-            if a.posicion.distancia_manhattan(posicion) <= 2
+            if a.posicion.distancia_manhattan(posicion) <= DISTANCIA_COHESION_ALIADOS
             and a.id != unidad.id
         )
-        puntuacion += aliados_cercanos * 20
+        puntuacion += aliados_cercanos * PESO_ALIADOS_CERCANOS
 
         # 2. Evaluar oportunidades de flanqueo
         for enemigo in enemigos:
@@ -402,7 +422,7 @@ class CalculadorPosicionTactica:
 
             # Si podemos atacar desde esta posición
             if dist_enemigo <= unidad.estadisticas.rango_ataque:
-                puntuacion += 50
+                puntuacion += PESO_OPORTUNIDAD_ATAQUE
 
                 # Bonus por flanqueo (enemigo entre nosotros y aliado)
                 for aliado in aliados:
@@ -410,7 +430,7 @@ class CalculadorPosicionTactica:
                         if CalculadorPosicionTactica._esta_flanqueando(
                             posicion, aliado.posicion, enemigo.posicion
                         ):
-                            puntuacion += 100
+                            puntuacion += PESO_FLANQUEO
 
         # 3. Evitar ser rodeado
         enemigos_adyacentes = sum(
@@ -418,7 +438,7 @@ class CalculadorPosicionTactica:
             if posicion.distancia_manhattan(e.posicion) <= 1
         )
         if enemigos_adyacentes > aliados_cercanos:
-            puntuacion -= 150  # Penalización por estar rodeado
+            puntuacion -= PESO_RODEADO_PENALIZACION  # Penalización por estar rodeado
 
         # 4. Posicionamiento específico por tipo
         if unidad.tipo == TipoUnidad.SAGITTARII:
