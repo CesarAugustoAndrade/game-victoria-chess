@@ -37,6 +37,10 @@ class BatallaState(State):
         self.ia_event_delay = 0.8  # Segundos entre eventos IA (más lento para ver mejor)
         self.processing_enemy_turn = False  # Flag para identificar eventos del turno enemigo
 
+        # ===== SISTEMA DE BLOQUEO/SINCRONIZACIÓN =====
+        self.processing_state = "READY"  # Estados: READY, PROCESSING_ENEMY_TURN, ANIMATING
+        self.total_ia_events = 0  # Para mostrar progreso
+
     def on_enter(self):
         """Inicia la batalla cuando se entra al estado"""
         if self.nivel:
@@ -61,6 +65,19 @@ class BatallaState(State):
         batalla = self.servicio_juego.obtener_batalla_actual()
         if not batalla:
             return
+
+        # ===== BLOQUEAR INPUT SI NO ESTÁ READY =====
+        # Solo permitir ESC para salir siempre
+        if self.processing_state != "READY":
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                # Permitir salir siempre
+                if self.nivel and self.campania:
+                    from src.states.nivel_selector_state import NivelSelectorState
+                    self.game.change_state(NivelSelectorState(self.game, self.campania))
+                else:
+                    from src.states.menu_state import MenuState
+                    self.game.change_state(MenuState(self.game))
+            return  # Ignorar todos los demás inputs
 
         # Manejar eventos de timer de cámara
         if event.type == pygame.USEREVENT + 1:
@@ -89,10 +106,20 @@ class BatallaState(State):
             elif event.key == pygame.K_SPACE:
                 # Finalizar turno
                 if batalla.turno_actual == TurnoActual.JUGADOR:
+                    self.processing_state = "PROCESSING_ENEMY_TURN"  # Bloquear input
                     self.processing_enemy_turn = True  # Marcar que vienen eventos del enemigo
+
                     eventos = self.servicio_juego.finalizar_turno()
                     self._procesar_eventos(eventos)
+
                     self.processing_enemy_turn = False  # Reset después de procesar
+
+                    # Si hay eventos en cola, cambiar a ANIMATING, si no, volver a READY
+                    if self.ia_events_queue:
+                        self.processing_state = "ANIMATING"
+                        self.total_ia_events = len(self.ia_events_queue)
+                    else:
+                        self.processing_state = "READY"
 
             elif event.key == pygame.K_f:
                 # Cambiar formación
@@ -425,8 +452,13 @@ class BatallaState(State):
                 self._procesar_evento_ia(evento)  # Procesar individualmente
                 self.ia_event_timer = 0  # Reset timer
 
+                # Cuando se vacía la cola, volver a READY
+                if not self.ia_events_queue:
+                    self.processing_state = "READY"
+                    print("[DEBUG] Animaciones completadas, input desbloqueado")
+
         # ===== SISTEMA DE AUTO-PLAY =====
-        elif self.auto_play_enabled:
+        elif self.auto_play_enabled and self.processing_state == "READY":
             batalla = self.servicio_juego.obtener_batalla_actual()
 
             # Solo ejecutar auto-play en turno del jugador y si la batalla no ha terminado
@@ -447,6 +479,10 @@ class BatallaState(State):
         if self.mensaje_actual:
             self._render_mensaje(screen)
 
+        # Renderizar indicador de procesamiento
+        if self.processing_state != "READY":
+            self._render_processing_indicator(screen)
+
     def _render_mensaje(self, screen):
         """Renderiza un mensaje en pantalla"""
         font = pygame.font.Font(None, 36)
@@ -466,6 +502,60 @@ class BatallaState(State):
             info_font = pygame.font.Font(None, 20)
             tutorial_text = info_font.render("Presiona T para más consejos", True, (100, 200, 255))
             screen.blit(tutorial_text, (screen.get_width() - 250, screen.get_height() - 30))
+
+    def _render_processing_indicator(self, screen):
+        """Renderiza indicador de procesamiento del turno enemigo"""
+        # Overlay semi-transparente
+        overlay = pygame.Surface(screen.get_size())
+        overlay.set_alpha(100)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+
+        # Determinar texto según estado
+        if self.processing_state == "PROCESSING_ENEMY_TURN":
+            text = "Calculando turno enemigo..."
+        elif self.processing_state == "ANIMATING":
+            # Mostrar progreso
+            eventos_procesados = self.total_ia_events - len(self.ia_events_queue)
+            text = f"Turno Enemigo: Acción {eventos_procesados}/{self.total_ia_events}"
+        else:
+            text = "Procesando..."
+
+        # Renderizar texto principal
+        font = pygame.font.Font(None, 48)
+        text_surface = font.render(text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(screen.get_width()//2, screen.get_height()//2))
+
+        # Fondo para el texto
+        padding = 20
+        bg_rect = text_rect.inflate(padding * 2, padding)
+        pygame.draw.rect(screen, (50, 0, 0), bg_rect)
+        pygame.draw.rect(screen, (200, 50, 50), bg_rect, 3)
+
+        screen.blit(text_surface, text_rect)
+
+        # Barra de progreso si está animando
+        if self.processing_state == "ANIMATING" and self.total_ia_events > 0:
+            # Calcular progreso
+            progress = (self.total_ia_events - len(self.ia_events_queue)) / self.total_ia_events
+
+            # Dimensiones de la barra
+            bar_width = 400
+            bar_height = 20
+            bar_x = (screen.get_width() - bar_width) // 2
+            bar_y = text_rect.bottom + 20
+
+            # Dibujar barra de progreso
+            pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height))
+            pygame.draw.rect(screen, (0, 200, 0), (bar_x, bar_y, int(bar_width * progress), bar_height))
+            pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
+
+        # Instrucción
+        font_small = pygame.font.Font(None, 24)
+        inst_text = "Por favor espere..."
+        inst_surface = font_small.render(inst_text, True, (200, 200, 200))
+        inst_rect = inst_surface.get_rect(center=(screen.get_width()//2, screen.get_height()//2 + 80))
+        screen.blit(inst_surface, inst_rect)
 
     def _mostrar_tutorial(self):
         """Muestra mensajes de tutorial secuencialmente"""
@@ -589,6 +679,21 @@ class BatallaState(State):
 
         # Si llegamos aquí, ninguna unidad puede actuar -> finalizar turno
         print("[AUTO-PLAY] No hay más acciones, finalizando turno...")
+
+        # Cambiar estado a procesando turno enemigo
+        self.processing_state = "PROCESSING_ENEMY_TURN"
+        self.processing_enemy_turn = True
+
         eventos = self.servicio_juego.finalizar_turno()
         self._procesar_eventos(eventos)
+
+        self.processing_enemy_turn = False
+
+        # Si hay eventos en cola, cambiar a ANIMATING
+        if self.ia_events_queue:
+            self.processing_state = "ANIMATING"
+            self.total_ia_events = len(self.ia_events_queue)
+        else:
+            self.processing_state = "READY"
+
         self._actualizar_highlights()
