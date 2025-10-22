@@ -262,7 +262,7 @@ class BattleRenderer:
 
     def _render_unit_status_indicators(self, screen: pygame.Surface, unidad: Unidad, x: int, y: int):
         """Renderiza indicadores de estado de la unidad"""
-        # Indicador de acción disponible (solo para romanos)
+        # Indicador de puntos de acción (solo para romanos)
         if unidad.bando == Bando.ROMA:
             indicator_x = x + 3
             indicator_y = y + 3
@@ -384,16 +384,71 @@ class BattleRenderer:
         self._render_controls(screen)
 
     def _render_army_status(self, screen: pygame.Surface, batalla: Batalla):
-        """Renderiza el estado de los ejércitos"""
-        # Ejército Romano
-        roma_text = f"ROMA: {len(batalla.ejercito_jugador.unidades_vivas)} unidades | Moral: {batalla.ejercito_jugador.moral_promedio:.0f}%"
-        roma_surface = self.font_stats.render(roma_text, True, (180, 20, 20))
-        screen.blit(roma_surface, (20, 100))
+        """Renderiza el estado de los ejércitos con barras de moral"""
+        # === Moral del ejército Romano ===
+        roma_y = 100
+        self._render_army_morale_bar(
+            screen,
+            "ROMA",
+            batalla.ejercito_jugador.moral_general,
+            len(batalla.ejercito_jugador.unidades_vivas),
+            20,
+            roma_y,
+            (180, 20, 20)
+        )
 
-        # Ejército Bárbaro
-        barbaro_text = f"BÁRBAROS: {len(batalla.ejercito_enemigo.unidades_vivas)} unidades | Moral: {batalla.ejercito_enemigo.moral_promedio:.0f}%"
-        barbaro_surface = self.font_stats.render(barbaro_text, True, (50, 100, 50))
-        screen.blit(barbaro_surface, (20, 125))
+        # === Moral del ejército Bárbaro ===
+        barbaro_y = 145
+        self._render_army_morale_bar(
+            screen,
+            "BÁRBAROS",
+            batalla.ejercito_enemigo.moral_general,
+            len(batalla.ejercito_enemigo.unidades_vivas),
+            20,
+            barbaro_y,
+            (50, 100, 50)
+        )
+
+    def _render_army_morale_bar(self, screen: pygame.Surface, nombre: str, moral: int,
+                                 unidades: int, x: int, y: int, color: tuple):
+        """Renderiza una barra de moral para un ejército"""
+        # Texto del ejército
+        text = f"{nombre}: {unidades} unidades"
+        text_surface = self.font_stats.render(text, True, color)
+        screen.blit(text_surface, (x, y))
+
+        # Barra de moral
+        bar_width = 200
+        bar_height = 20
+        bar_x = x
+        bar_y = y + 22
+
+        # Fondo de la barra
+        pygame.draw.rect(screen, (40, 40, 40), (bar_x - 2, bar_y - 2, bar_width + 4, bar_height + 4))
+        pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
+
+        # Moral actual
+        moral_percentage = moral / 100.0
+        current_width = int(bar_width * moral_percentage)
+
+        # Color según nivel de moral
+        if moral_percentage > 0.7:
+            bar_color = (0, 200, 0)  # Verde - alta moral
+        elif moral_percentage > 0.4:
+            bar_color = (255, 200, 0)  # Amarillo - moral media
+        elif moral_percentage > 0.2:
+            bar_color = (255, 100, 0)  # Naranja - moral baja
+        else:
+            bar_color = (255, 0, 0)  # Rojo - moral crítica
+
+        if current_width > 0:
+            pygame.draw.rect(screen, bar_color, (bar_x, bar_y, current_width, bar_height))
+
+        # Texto de moral
+        moral_text = f"Moral: {moral}/100"
+        moral_text_surface = self.font_stats.render(moral_text, True, (255, 255, 255))
+        text_rect = moral_text_surface.get_rect(center=(bar_x + bar_width // 2, bar_y + bar_height // 2))
+        screen.blit(moral_text_surface, text_rect)
 
     def _render_unit_info(self, screen: pygame.Surface, unidad: Unidad):
         """Renderiza información de la unidad seleccionada"""
@@ -414,13 +469,18 @@ class BattleRenderer:
         screen.blit(latin_text, (info_x, info_y + 25))
 
         # Estadísticas
+        patron_texto = {
+            "frontal": "Frontal",
+            "frontal_diagonal": "Todas direcciones",
+            "rango": "A distancia"
+        }
+
         stats = [
             f"Vida: {unidad.vida_actual}/{unidad.estadisticas.vida_maxima}",
-            f"Ataque: {unidad.estadisticas.ataque}",
-            f"Defensa: {unidad.estadisticas.defensa}",
-            f"Moral: {unidad.moral_actual}%",
-            f"Movimiento: {unidad.estadisticas.rango_movimiento}",
-            f"Alcance: {unidad.estadisticas.rango_ataque}"
+            f"Ataque: {unidad.estadisticas.ataque} | Defensa: {unidad.estadisticas.defensa}",
+            f"Moral: {unidad.moral_actual}% | Costo: {unidad.estadisticas.costo_moral}",
+            f"Mov: {unidad.estadisticas.rango_movimiento} | Alcance: {unidad.estadisticas.rango_ataque}",
+            f"Patrón: {patron_texto.get(unidad.estadisticas.patron_ataque.value, 'Desconocido')}"
         ]
 
         y_offset = 60

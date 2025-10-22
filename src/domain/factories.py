@@ -4,7 +4,7 @@ Fábricas para crear ejércitos y unidades romanas
 
 from src.domain.entities import Unidad, Ejercito
 from src.domain.value_objects import (
-    TipoUnidad, Bando, Posicion, EstadisticasUnidad, VisualizacionUnidad
+    TipoUnidad, Bando, Posicion, EstadisticasUnidad, VisualizacionUnidad, PatronAtaque
 )
 
 
@@ -20,7 +20,9 @@ class FabricaEjercito:
             rango_movimiento=2,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=80
+            moral=80,
+            costo_moral=9,  # Heavy infantry
+            patron_ataque=PatronAtaque.FRONTAL  # Classic formation attack
         ),
         TipoUnidad.HASTATI: EstadisticasUnidad(
             vida_maxima=150,
@@ -29,7 +31,9 @@ class FabricaEjercito:
             rango_movimiento=1,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=90
+            moral=90,
+            costo_moral=6,  # Young soldiers
+            patron_ataque=PatronAtaque.FRONTAL  # Formation fighter
         ),
         TipoUnidad.TRIARII: EstadisticasUnidad(
             vida_maxima=90,
@@ -38,7 +42,9 @@ class FabricaEjercito:
             rango_movimiento=1,
             rango_ataque=1,
             bonus_contra_caballeria=20,  # Bonus contra caballería
-            moral=100  # Veteranos con alta moral
+            moral=100,  # Veteranos con alta moral
+            costo_moral=12,  # Elite spearmen
+            patron_ataque=PatronAtaque.FRONTAL  # Phalanx formation
         ),
         TipoUnidad.EQUITES: EstadisticasUnidad(
             vida_maxima=120,
@@ -47,7 +53,9 @@ class FabricaEjercito:
             rango_movimiento=3,  # Mayor movimiento
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=85
+            moral=85,
+            costo_moral=10,  # Cavalry
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Mobile cavalry charges
         ),
         TipoUnidad.SAGITTARII: EstadisticasUnidad(
             vida_maxima=70,
@@ -56,7 +64,9 @@ class FabricaEjercito:
             rango_movimiento=2,
             rango_ataque=3,  # Ataque a distancia
             bonus_contra_caballeria=0,
-            moral=70
+            moral=70,
+            costo_moral=4,  # Light archers
+            patron_ataque=PatronAtaque.RANGO  # Ranged attacks only
         ),
         TipoUnidad.VELITES: EstadisticasUnidad(
             vida_maxima=60,
@@ -65,7 +75,9 @@ class FabricaEjercito:
             rango_movimiento=3,  # Muy móviles
             rango_ataque=2,  # Jabalinas de medio alcance
             bonus_contra_caballeria=0,
-            moral=65
+            moral=65,
+            costo_moral=3,  # Light skirmishers
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Mobile skirmishers
         ),
         TipoUnidad.PRINCEPS: EstadisticasUnidad(
             vida_maxima=130,
@@ -74,7 +86,20 @@ class FabricaEjercito:
             rango_movimiento=2,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=95  # Veteranos experimentados
+            moral=95,  # Veteranos experimentados
+            costo_moral=8,  # Veteran infantry
+            patron_ataque=PatronAtaque.FRONTAL  # Formation fighter
+        ),
+        TipoUnidad.GENERAL: EstadisticasUnidad(
+            vida_maxima=96,  # 12 * 8 scaling
+            ataque=32,  # 4 * 8 scaling
+            defensa=48,  # 6 * 8 scaling
+            rango_movimiento=2,
+            rango_ataque=1,
+            bonus_contra_caballeria=0,
+            moral=100,  # High morale
+            costo_moral=30,  # DEVASTATING loss
+            patron_ataque=PatronAtaque.FRONTAL  # Formation fighter
         ),
 
         # Estadísticas de unidades galas
@@ -85,7 +110,9 @@ class FabricaEjercito:
             rango_movimiento=2,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=70  # Agresivos pero poco disciplinados
+            moral=70,  # Agresivos pero poco disciplinados
+            costo_moral=6,  # Standard warrior
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Barbarian charge
         ),
         TipoUnidad.ESPADAS_ELEGIDAS: EstadisticasUnidad(
             vida_maxima=140,
@@ -94,7 +121,9 @@ class FabricaEjercito:
             rango_movimiento=2,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=90  # Élite gala
+            moral=90,  # Élite gala
+            costo_moral=10,  # Elite warriors
+            patron_ataque=PatronAtaque.FRONTAL  # Disciplined elite
         ),
         TipoUnidad.FANATICOS_DESNUDOS: EstadisticasUnidad(
             vida_maxima=60,
@@ -103,7 +132,9 @@ class FabricaEjercito:
             rango_movimiento=3,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=100  # Intrépidos, no sienten miedo
+            moral=100,  # Intrépidos, no sienten miedo
+            costo_moral=5,  # Fanatics, not valued highly
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Wild charges
         ),
         TipoUnidad.ESCARAMUZADORES: EstadisticasUnidad(
             vida_maxima=55,
@@ -112,7 +143,9 @@ class FabricaEjercito:
             rango_movimiento=3,
             rango_ataque=2,  # Hondas y jabalinas
             bonus_contra_caballeria=0,
-            moral=60  # Frágiles moralmente
+            moral=60,  # Frágiles moralmente
+            costo_moral=3,  # Light troops
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Mobile skirmishers
         ),
         TipoUnidad.CABALLERIA_BARBARA: EstadisticasUnidad(
             vida_maxima=100,
@@ -121,7 +154,9 @@ class FabricaEjercito:
             rango_movimiento=4,  # Muy rápida
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=75
+            moral=75,
+            costo_moral=8,  # Standard cavalry
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Mobile cavalry
         ),
         TipoUnidad.CABALLERIA_NOBLE: EstadisticasUnidad(
             vida_maxima=130,
@@ -130,7 +165,9 @@ class FabricaEjercito:
             rango_movimiento=3,
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=95  # Aristocratas galos
+            moral=95,  # Aristocratas galos
+            costo_moral=12,  # Noble elite cavalry
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Elite cavalry charges
         ),
         TipoUnidad.CARROS_GUERRA: EstadisticasUnidad(
             vida_maxima=110,
@@ -139,7 +176,9 @@ class FabricaEjercito:
             rango_movimiento=4,  # Muy rápidos
             rango_ataque=1,
             bonus_contra_caballeria=0,
-            moral=85
+            moral=85,
+            costo_moral=10,  # War chariots
+            patron_ataque=PatronAtaque.FRONTAL_DIAGONAL  # Mobile chariot charges
         )
     }
 
@@ -200,6 +239,14 @@ class FabricaEjercito:
             color_principal=(160, 20, 20),
             color_secundario=(218, 165, 32),   # Dorado oscuro
             grito_guerra="VIRTUS ET HONOR!"  # Virtud y honor
+        ),
+        TipoUnidad.GENERAL: VisualizacionUnidad(
+            nombre="General",
+            nombre_latino="Dux Imperator",
+            icono="👑",
+            color_principal=(200, 20, 20),     # Rojo brillante
+            color_secundario=(255, 215, 0),    # Oro puro
+            grito_guerra="IMPERIUM ROMANUM!"   # Imperio Romano
         )
     }
 

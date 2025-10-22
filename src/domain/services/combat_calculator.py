@@ -26,19 +26,25 @@ class CalculadorCombate:
         """Ejecuta un ataque y retorna el resultado"""
         danio = CalculadorCombate.calcular_danio(atacante, defensor)
 
+        # Verificar si el ataque fue bloqueado completamente
+        bloqueado = (danio == 0)
+
         vida_antes = defensor.vida_actual
-        defensor.recibir_danio(danio)
+        if danio > 0:
+            defensor.recibir_danio(danio)
+
         atacante.marcar_como_actuada()
 
-        # Calcular pérdida de moral
-        moral_perdida = min(MORAL_PERDIDA_MAX_POR_DANIO, danio)
+        # Calcular pérdida de moral (incluso si el ataque fue bloqueado, hay efecto psicológico)
+        moral_perdida = min(MORAL_PERDIDA_MAX_POR_DANIO, max(danio, 2))  # Mínimo 2 de moral
 
         return ResultadoAtaque(
             atacante_id=atacante.id,
             defensor_id=defensor.id,
             danio_infligido=danio,
             objetivo_eliminado=not defensor.esta_viva,
-            moral_perdida=moral_perdida
+            moral_perdida=moral_perdida,
+            bloqueado=bloqueado
         )
 
     @staticmethod

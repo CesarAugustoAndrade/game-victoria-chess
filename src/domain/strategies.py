@@ -52,95 +52,77 @@ class IAAgresiva(EstrategiaIA):
             if unidad.esta_en_panico:
                 continue  # Las unidades en pánico no actúan
 
-            # Prioridad 1: Atacar si es posible
-            objetivos = unidad.obtener_objetivos_atacables(
-                ejercito_enemigo.unidades_vivas
-            )
+            # Sistema flexible de puntos de acción - hacer múltiples acciones
+            while unidad.puntos_accion > 0 and not unidad.esta_en_panico:
+                accion_realizada = False
 
-            if objetivos and unidad.puede_actuar:
-                mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
-                    unidad, objetivos
-                )
-
-                if mejor_objetivo:
-                    # Añadir evento de acción IA
-                    eventos.append(EventoAccionIA(
-                        f"{unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}",
-                        "atacar"
-                    ))
-
-                    resultado = CalculadorCombate.ejecutar_ataque(
-                        unidad, mejor_objetivo
-                    )
-                    eventos.append(EventoAtaqueRealizado(
-                        resultado,
-                        grito_guerra=unidad.visualizacion.grito_guerra
-                    ))
-
-                    if resultado.objetivo_eliminado:
-                        eventos.append(EventoUnidadEliminada(
-                            mejor_objetivo.id,
-                            mejor_objetivo.bando,
-                            mejor_objetivo.tipo.value,
-                            "¡Enemigo eliminado!"
-                        ))
-
-            # Prioridad 2: Moverse hacia enemigos si no puede atacar
-            # NOTA: Cambiado de elif a if para permitir moverse Y luego atacar
-            if not objetivos and unidad.puede_moverse:
-                movimientos = unidad.obtener_posiciones_movimiento_validas(tablero)
-
-                if movimientos:
-                    mejor_movimiento = CalculadorMovimiento.seleccionar_mejor_movimiento(
-                        unidad, movimientos, ejercito_enemigo.unidades_vivas
+                # Intentar atacar si tiene PA
+                if unidad.puede_atacar:
+                    objetivos = unidad.obtener_objetivos_atacables(
+                        ejercito_enemigo.unidades_vivas
                     )
 
-                    if mejor_movimiento:
-                        posicion_origen = unidad.posicion
-                        unidad.mover_a(mejor_movimiento)
-
-                        eventos.append(EventoAccionIA(
-                            f"{unidad.visualizacion.nombre} avanza",
-                            "mover"
-                        ))
-
-                        eventos.append(EventoUnidadMovida(
-                            unidad.id,
-                            posicion_origen,
-                            mejor_movimiento
-                        ))
-
-                        # Prioridad 3: Intentar atacar después de moverse
-                        objetivos_despues_mover = unidad.obtener_objetivos_atacables(
-                            ejercito_enemigo.unidades_vivas
+                    if objetivos:
+                        mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
+                            unidad, objetivos
                         )
 
-                        if objetivos_despues_mover and unidad.puede_actuar:
-                            mejor_objetivo = CalculadorPrioridad.seleccionar_mejor_objetivo(
-                                unidad, objetivos_despues_mover
+                        if mejor_objetivo:
+                            accion_realizada = True
+                            # Añadir evento de acción IA
+                            eventos.append(EventoAccionIA(
+                                f"{unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}",
+                                "atacar"
+                            ))
+
+                            resultado = CalculadorCombate.ejecutar_ataque(
+                                unidad, mejor_objetivo
                             )
+                            unidad.marcar_ataque_realizado()  # Consumir PA
 
-                            if mejor_objetivo:
-                                eventos.append(EventoAccionIA(
-                                    f"{unidad.visualizacion.nombre} ataca a {mejor_objetivo.visualizacion.nombre}",
-                                    "atacar"
+                            eventos.append(EventoAtaqueRealizado(
+                                resultado,
+                                grito_guerra=unidad.visualizacion.grito_guerra
+                            ))
+
+                            if resultado.objetivo_eliminado:
+                                eventos.append(EventoUnidadEliminada(
+                                    mejor_objetivo.id,
+                                    mejor_objetivo.bando,
+                                    mejor_objetivo.tipo.value,
+                                    "¡Enemigo eliminado!"
                                 ))
+                            continue  # Siguiente iteración del while
 
-                                resultado = CalculadorCombate.ejecutar_ataque(
-                                    unidad, mejor_objetivo
-                                )
-                                eventos.append(EventoAtaqueRealizado(
-                                    resultado,
-                                    grito_guerra=unidad.visualizacion.grito_guerra
-                                ))
+                # Si no atacó, intentar moverse
+                if not accion_realizada and unidad.puede_moverse:
+                    movimientos = unidad.obtener_posiciones_movimiento_validas(tablero)
 
-                                if resultado.objetivo_eliminado:
-                                    eventos.append(EventoUnidadEliminada(
-                                        mejor_objetivo.id,
-                                        mejor_objetivo.bando,
-                                        mejor_objetivo.tipo.value,
-                                        "¡Enemigo eliminado!"
-                                    ))
+                    if movimientos:
+                        mejor_movimiento = CalculadorMovimiento.seleccionar_mejor_movimiento(
+                            unidad, movimientos, ejercito_enemigo.unidades_vivas
+                        )
+
+                        if mejor_movimiento:
+                            accion_realizada = True
+                            posicion_origen = unidad.posicion
+                            unidad.mover_a(mejor_movimiento)  # Consume PA
+
+                            eventos.append(EventoAccionIA(
+                                f"{unidad.visualizacion.nombre} avanza",
+                                "mover"
+                            ))
+
+                            eventos.append(EventoUnidadMovida(
+                                unidad.id,
+                                posicion_origen,
+                                mejor_movimiento
+                            ))
+                            continue  # Siguiente iteración
+
+                # Si no pudo hacer nada, terminar
+                if not accion_realizada:
+                    break
 
         return eventos
 

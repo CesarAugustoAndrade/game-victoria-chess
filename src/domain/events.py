@@ -97,3 +97,37 @@ class EventoAccionIA(EventoDominio):
     """Evento cuando la IA realiza una acción"""
     descripcion: str
     tipo_accion: str  # "mover" o "atacar"
+
+
+@dataclass
+class EventoMoralGeneralCambiada(EventoDominio):
+    """Evento cuando cambia la moral del ejército"""
+    bando: Bando
+    moral_anterior: int
+    moral_nueva: int
+    causa: str  # "unidad_eliminada", "centro_perdido", "masacre", etc.
+    mensaje: str = ""
+
+
+@dataclass
+class EventoAtaqueBloqueado(EventoDominio):
+    """Evento cuando un ataque es completamente bloqueado"""
+    atacante_id: str
+    defensor_id: str
+    ataque: int
+    defensa: int
+    mensaje: str = "¡Ataque bloqueado por la defensa!"
+
+
+@dataclass
+class EventoMasacreTactica(EventoDominio):
+    """Evento cuando se logra una masacre táctica (3+ kills)"""
+    bando_atacante: Bando
+    unidades_eliminadas: int
+    moral_enemiga_perdida: int
+    moral_propia_ganada: int
+    mensaje: str = ""
+
+    def __post_init__(self):
+        if not self.mensaje:
+            self.mensaje = f"¡Masacre Táctica! {self.bando_atacante.value} elimina {self.unidades_eliminadas} unidades"

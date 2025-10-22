@@ -139,6 +139,21 @@ class ServicioJuego:
         self._eventos_procesados.extend(eventos)
         return eventos
 
+    def usar_habilidad(self, nombre_habilidad: str, objetivo=None) -> List[EventoDominio]:
+        """Usa una habilidad de la unidad seleccionada"""
+        self._validar_batalla_activa()
+        eventos = self._batalla_actual.usar_habilidad_con_unidad_seleccionada(nombre_habilidad, objetivo)
+        self._eventos_procesados.extend(eventos)
+        return eventos
+
+    def obtener_habilidades_unidad_seleccionada(self):
+        """Obtiene las habilidades de la unidad seleccionada"""
+        if not self._batalla_actual or not self._batalla_actual.unidad_seleccionada:
+            return []
+
+        unidad = self._batalla_actual.unidad_seleccionada
+        return unidad.gestor_habilidades.habilidades_activas
+
     def obtener_estado_batalla(self) -> dict:
         """Obtiene el estado actual de la batalla para la UI"""
         return self._caso_estado.ejecutar(self._batalla_actual)

@@ -4,6 +4,7 @@ Value Objects para el dominio de Legio Romana
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 
 class TipoUnidad(Enum):
@@ -16,6 +17,7 @@ class TipoUnidad(Enum):
     SAGITTARII = "sagittarii"          # Arqueros
     VELITES = "velites"                # Infantería ligera con jabalinas
     PRINCEPS = "princeps"              # Infantería veterana
+    GENERAL = "general"                # Comandante general
 
     # Unidades Galas
     GUERRERO_TRIBAL = "guerrero_tribal"        # Infantería básica gala
@@ -46,6 +48,13 @@ class TurnoActual(Enum):
     """Identificación de turno activo"""
     JUGADOR = "player"
     ENEMIGO = "enemy"
+
+
+class PatronAtaque(Enum):
+    """Patrones de ataque para diferentes tipos de unidades"""
+    FRONTAL = "frontal"  # Heavy infantry - solo 4 direcciones cardinales
+    FRONTAL_DIAGONAL = "frontal_diagonal"  # Light/medium - todas las direcciones
+    RANGO = "rango"  # Arqueros - distancia 2-5
 
 
 @dataclass(frozen=True)
@@ -94,10 +103,13 @@ class EstadisticasUnidad:
     rango_ataque: int
     bonus_contra_caballeria: int = 0
     moral: int = 100  # Nueva estadística romana
+    costo_moral: int = 5  # Costo de moral cuando la unidad muere
+    patron_ataque: PatronAtaque = PatronAtaque.FRONTAL_DIAGONAL  # Patrón de ataque
 
     def calcular_danio_base(self, defensa_objetivo: int) -> int:
-        """Calcula el daño base considerando defensa del objetivo"""
-        return max(1, self.ataque - (defensa_objetivo // 2))
+        """Calcula el daño base con fórmula clásica: ATQ - DEF (puede ser 0)"""
+        # Fórmula clásica: ATQ - DEF completo
+        return max(0, self.ataque - defensa_objetivo)
 
 
 @dataclass(frozen=True)
@@ -119,3 +131,4 @@ class ResultadoAtaque:
     danio_infligido: int
     objetivo_eliminado: bool
     moral_perdida: int = 0  # Pérdida de moral
+    bloqueado: bool = False  # Si el ataque fue completamente bloqueado

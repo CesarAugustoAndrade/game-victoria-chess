@@ -11,6 +11,9 @@ from src.domain.events import *
 from src.domain.exceptions import *
 from src.domain.services import CalculadorCombate
 from src.domain.strategies import EstrategiaIA
+from src.domain.abilities import TipoAccion, ContextoHabilidad
+from src.domain.ability_effects import obtener_efecto, EventoHabilidadUsada
+from src.domain.services.center_control import ControlCentro
 
 
 class Batalla:
@@ -33,6 +36,11 @@ class Batalla:
         self._eventos_pendientes: List[EventoDominio] = []
         self._batalla_terminada = False
         self._ganador: Optional[Bando] = None
+
+        # Strategic mechanics
+        self._control_centro = ControlCentro(tablero)
+        self._eliminaciones_turno = 0
+        self._bando_atacante_turno = None
 
         # Registrar ejércitos en el tablero
         tablero.registrar_ejercito(ejercito_jugador)
@@ -175,6 +183,15 @@ class Batalla:
             objetivo
         )
 
+        # Si el ataque fue bloqueado, emitir evento especial
+        if resultado.bloqueado:
+            self._eventos_pendientes.append(EventoAtaqueBloqueado(
+                self._unidad_seleccionada.id,
+                objetivo.id,
+                self._unidad_seleccionada.estadisticas.ataque,
+                objetivo.estadisticas.defensa
+            ))
+
         # Añadir grito de guerra
         grito = self._unidad_seleccionada.visualizacion.grito_guerra
         self._eventos_pendientes.append(
@@ -182,13 +199,36 @@ class Batalla:
         )
 
         if resultado.objetivo_eliminado:
+            # Track elimination for massacre
+            self._eliminaciones_turno += 1
+            if self._bando_atacante_turno != Bando.ROMA:
+                self._bando_atacante_turno = Bando.ROMA
+
+            # Deducir moral del ejército por la pérdida
+            moral_anterior = self._ejercito_enemigo.moral_general
+            self._ejercito_enemigo.perder_moral_por_unidad(objetivo)
+            moral_nueva = self._ejercito_enemigo.moral_general
+
             self._eventos_pendientes.append(EventoUnidadEliminada(
                 objetivo.id,
                 objetivo.bando,
                 objetivo.tipo.value,
                 f"¡{objetivo.visualizacion.nombre} ha caído!"
             ))
+
+            # Emitir evento de cambio de moral
+            self._eventos_pendientes.append(EventoMoralGeneralCambiada(
+                objetivo.bando,
+                moral_anterior,
+                moral_nueva,
+                "unidad_eliminada",
+                f"¡El ejército enemigo pierde {objetivo.estadisticas.costo_moral} de moral!"
+            ))
+
             self._ejercito_enemigo.remover_unidades_muertas()
+
+            # Check for tactical massacre (3+ kills in one turn)
+            self._verificar_masacre_tactica()
 
         # Verificar pánico
         if objetivo.esta_viva and objetivo.esta_en_panico:
@@ -225,15 +265,29 @@ class Batalla:
 
         self._eventos_pendientes.extend(eventos_ia)
 
-        # Remover unidades muertas del jugador
+        # Remover unidades muertas del jugador y ajustar moral
         unidades_eliminadas = self._ejercito_jugador.remover_unidades_muertas()
 
         for unidad in unidades_eliminadas:
+            # Deducir moral del ejército
+            moral_anterior = self._ejercito_jugador.moral_general
+            self._ejercito_jugador.perder_moral_por_unidad(unidad)
+            moral_nueva = self._ejercito_jugador.moral_general
+
             self._eventos_pendientes.append(EventoUnidadEliminada(
                 unidad.id,
                 unidad.bando,
                 unidad.tipo.value,
                 f"¡{unidad.visualizacion.nombre} ha caído!"
+            ))
+
+            # Emitir evento de cambio de moral
+            self._eventos_pendientes.append(EventoMoralGeneralCambiada(
+                unidad.bando,
+                moral_anterior,
+                moral_nueva,
+                "unidad_eliminada",
+                f"¡Tu ejército pierde {unidad.estadisticas.costo_moral} de moral!"
             ))
 
         # Verificar si el jugador fue derrotado
@@ -292,12 +346,80 @@ class Batalla:
             self._ejercito_enemigo.unidades_vivas
         )
 
+    def usar_habilidad_con_unidad_seleccionada(self, nombre_habilidad: str, objetivo: Optional[Posicion] = None) -> List[EventoDominio]:
+        """Usa una habilidad de la unidad seleccionada"""
+        if self._unidad_seleccionada is None:
+            raise ExcepcionAccionInvalida("No hay unidad seleccionada")
+
+        if not self._unidad_seleccionada.puede_realizar_accion(TipoAccion.HABILIDAD):
+            raise ExcepcionAccionInvalida("La unidad no puede usar habilidades ahora")
+
+        # Get the ability
+        habilidad = self._unidad_seleccionada.gestor_habilidades.obtener_habilidad_activa(nombre_habilidad)
+        if not habilidad:
+            raise ExcepcionAccionInvalida(f"La unidad no tiene la habilidad {nombre_habilidad}")
+
+        if not habilidad.puede_usar():
+            raise ExcepcionAccionInvalida(f"La habilidad {nombre_habilidad} está en cooldown o sin usos")
+
+        # Get the effect implementation
+        efecto = obtener_efecto(nombre_habilidad.lower().replace(" ", "_").replace("¡", "").replace("!", ""))
+        if not efecto:
+            # No specific effect, just use the ability and generate event
+            habilidad.usar()
+            self._unidad_seleccionada.marcar_como_actuada()
+
+            evento = EventoHabilidadUsada(
+                unidad_id=self._unidad_seleccionada.id,
+                habilidad_nombre=nombre_habilidad,
+                cooldown=habilidad.cooldown_maximo,
+                descripcion=habilidad.descripcion
+            )
+            self._eventos_pendientes.append(evento)
+            self._unidad_seleccionada = None
+            return self._consumir_eventos()
+
+        # Prepare context for ability effect
+        contexto = ContextoHabilidad(
+            unidad_origen=self._unidad_seleccionada,
+            ejercito_aliado=self._ejercito_jugador,
+            ejercito_enemigo=self._ejercito_enemigo,
+            tablero=self._tablero,
+            objetivo=objetivo
+        )
+
+        # Apply the effect
+        try:
+            eventos_habilidad = efecto.aplicar(contexto)
+            self._eventos_pendientes.extend(eventos_habilidad)
+
+            # Use the ability (set cooldown)
+            habilidad.usar()
+            self._unidad_seleccionada.marcar_como_actuada()
+
+        except Exception as e:
+            raise ExcepcionAccionInvalida(f"Error al usar habilidad: {str(e)}")
+
+        self._unidad_seleccionada = None
+        return self._consumir_eventos()
+
     def _iniciar_nuevo_turno_jugador(self) -> None:
         """Inicia un nuevo turno del jugador"""
         self._ejercito_jugador.reiniciar_turno_todas_unidades()
         self._ejercito_enemigo.reiniciar_turno_todas_unidades()
         self._ronda_actual += 1
         self._turno_actual = TurnoActual.JUGADOR
+
+        # Reset massacre counter for new turn
+        self._eliminaciones_turno = 0
+        self._bando_atacante_turno = None
+
+        # Check center control and apply penalties
+        eventos_centro = self._control_centro.evaluar_control_al_final_turno(
+            self._ejercito_jugador,
+            self._ejercito_enemigo
+        )
+        self._eventos_pendientes.extend(eventos_centro)
 
         evento = EventoTurnoFinalizado(
             TurnoActual.ENEMIGO,
@@ -316,8 +438,19 @@ class Batalla:
             else self._ejercito_enemigo
         )
 
-        mensaje = ("¡VICTORIA! ¡Roma es eterna!" if ganador == Bando.ROMA
-                  else "¡DERROTA! Los bárbaros han vencido...")
+        ejercito_derrotado = (
+            self._ejercito_enemigo if ganador == Bando.ROMA
+            else self._ejercito_jugador
+        )
+
+        # Determinar la razón de la victoria
+        if ejercito_derrotado.moral_general <= 0:
+            razon = "¡La moral enemiga se ha roto!"
+        else:
+            razon = "¡El enemigo ha sido aniquilado!"
+
+        mensaje = (f"¡VICTORIA! {razon} ¡Roma es eterna!" if ganador == Bando.ROMA
+                  else f"¡DERROTA! {razon} Los bárbaros han vencido...")
 
         evento = EventoBatallaTerminada(
             ganador,
@@ -331,3 +464,38 @@ class Batalla:
         eventos = self._eventos_pendientes.copy()
         self._eventos_pendientes.clear()
         return eventos
+
+    def _verificar_masacre_tactica(self) -> None:
+        """Check and apply tactical massacre bonus/penalty"""
+        UMBRAL_MASACRE = 3
+        MORAL_PERDIDA_ENEMIGO = 10
+        MORAL_GANADA_PROPIA = 5
+
+        if self._eliminaciones_turno >= UMBRAL_MASACRE:
+            if self._bando_atacante_turno == Bando.ROMA:
+                # Player achieved massacre
+                self._ejercito_enemigo.perder_moral(MORAL_PERDIDA_ENEMIGO)
+                self._ejercito_jugador.ganar_moral(MORAL_GANADA_PROPIA)
+            else:
+                # AI achieved massacre
+                self._ejercito_jugador.perder_moral(MORAL_PERDIDA_ENEMIGO)
+                self._ejercito_enemigo.ganar_moral(MORAL_GANADA_PROPIA)
+
+            self._eventos_pendientes.append(EventoMasacreTactica(
+                bando_atacante=self._bando_atacante_turno,
+                unidades_eliminadas=self._eliminaciones_turno,
+                moral_enemiga_perdida=MORAL_PERDIDA_ENEMIGO,
+                moral_propia_ganada=MORAL_GANADA_PROPIA
+            ))
+
+    def obtener_casillas_centro(self) -> List[Posicion]:
+        """Get center tiles for UI display"""
+        return self._control_centro.casillas_centrales
+
+    def obtener_eliminaciones_turno(self) -> int:
+        """Get current turn eliminations for UI counter"""
+        return self._eliminaciones_turno
+
+    def obtener_control_centro_estado(self) -> dict:
+        """Get center control status"""
+        return self._control_centro.obtener_estadisticas_control()
