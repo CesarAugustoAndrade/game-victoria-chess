@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "last_save": "2025-10-19T15:13:49.373675",
+  "tipo_campania": "tutorial",
+  "nivel_actual": 0,
+  "niveles_completados": [
+    0
+  ],
+  "progreso": 0.1111,
+  "estadisticas": {
+    "batallas_ganadas": 1,
+    "batallas_perdidas": 0,
+    "unidades_galas_eliminadas": 0,
+    "tiempo_total_jugado": 0,
+    "uso_formaciones": 0
+  }
+}

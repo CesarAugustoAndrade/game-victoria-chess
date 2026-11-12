@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "last_save": "2025-10-21T14:43:19.542826",
+  "tipo_campania": "galia",
+  "nivel_actual": 2,
+  "niveles_completados": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "progreso": 0.4444444444444444,
+  "estadisticas": {
+    "batallas_ganadas": 6,
+    "batallas_perdidas": 2,
+    "unidades_galas_eliminadas": 0,
+    "tiempo_total_jugado": 0,
+    "uso_formaciones": 0
+  }
+}
